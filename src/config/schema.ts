@@ -29,6 +29,7 @@ const vertexChannelSchema = z.object({
   type: z.literal('vertex'),
   project: z.string(),
   region: z.string(),
+  provider: z.enum(['gemini', 'anthropic', 'maas']).optional(),
 })
 
 const azureChannelSchema = z.object({

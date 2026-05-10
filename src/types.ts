@@ -15,7 +15,7 @@ export type ChannelConfig =
   | { name: string; type: 'openai'; apiKey: string }
   | { name: string; type: 'google'; apiKey: string }
   | { name: string; type: 'bedrock'; region: string }
-  | { name: string; type: 'vertex'; project: string; region: string }
+  | { name: string; type: 'vertex'; project: string; region: string; provider?: 'gemini' | 'anthropic' | 'maas' }
   | { name: string; type: 'azure'; resourceName: string; apiKey: string }
   | { name: string; type: 'openai-compatible'; baseUrl: string; apiKey?: string }
 
