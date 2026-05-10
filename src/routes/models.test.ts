@@ -9,12 +9,15 @@ import type { LanguageModel } from 'ai'
 function makeAdapter(): ProviderAdapter {
   return {
     transformRequest: (req: GatewayRequest) => req,
-    transformResponse: async function* (stream) { yield* stream },
-    createModel: (): LanguageModel => new MockLanguageModelV3({
-      doStream: async () => ({
-        stream: convertArrayToReadableStream([]),
+    transformResponse: async function* (stream) {
+      yield* stream
+    },
+    createModel: (): LanguageModel =>
+      new MockLanguageModelV3({
+        doStream: async () => ({
+          stream: convertArrayToReadableStream([]),
+        }),
       }),
-    }),
   }
 }
 

@@ -33,7 +33,7 @@ describe('AnthropicAdapter.transformRequest', () => {
       ],
     })
     const result = adapter.transformRequest(req) as GatewayRequest
-    const systemMessages = result.messages.filter(m => m.role === 'system')
+    const systemMessages = result.messages.filter((m) => m.role === 'system')
     expect(systemMessages).toHaveLength(1)
     expect(systemMessages[0].content).toBe('Be helpful.\n\nBe concise.')
   })
@@ -46,7 +46,7 @@ describe('AnthropicAdapter.transformRequest', () => {
       ],
     })
     const result = adapter.transformRequest(req) as GatewayRequest
-    const systemMessages = result.messages.filter(m => m.role === 'system')
+    const systemMessages = result.messages.filter((m) => m.role === 'system')
     expect(systemMessages).toHaveLength(1)
   })
 
@@ -54,28 +54,36 @@ describe('AnthropicAdapter.transformRequest', () => {
     const req = makeReq({ reasoning_effort: 'low' })
     const result = adapter.transformRequest(req) as GatewayRequest
     expect(result.temperature).toBe(1)
-    const anthropicOptions = (result.providerOptions as Record<string, unknown>)?.['anthropic'] as Record<string, unknown>
+    const anthropicOptions = (result.providerOptions as Record<string, unknown>)?.[
+      'anthropic'
+    ] as Record<string, unknown>
     expect(anthropicOptions?.['thinking']).toMatchObject({ type: 'enabled', budgetTokens: 2000 })
   })
 
   it('maps reasoning_effort medium → budget 8000', () => {
     const req = makeReq({ reasoning_effort: 'medium' })
     const result = adapter.transformRequest(req) as GatewayRequest
-    const anthropicOptions = (result.providerOptions as Record<string, unknown>)?.['anthropic'] as Record<string, unknown>
+    const anthropicOptions = (result.providerOptions as Record<string, unknown>)?.[
+      'anthropic'
+    ] as Record<string, unknown>
     expect(anthropicOptions?.['thinking']).toMatchObject({ budgetTokens: 8000 })
   })
 
   it('maps reasoning_effort high → budget 16000', () => {
     const req = makeReq({ reasoning_effort: 'high' })
     const result = adapter.transformRequest(req) as GatewayRequest
-    const anthropicOptions = (result.providerOptions as Record<string, unknown>)?.['anthropic'] as Record<string, unknown>
+    const anthropicOptions = (result.providerOptions as Record<string, unknown>)?.[
+      'anthropic'
+    ] as Record<string, unknown>
     expect(anthropicOptions?.['thinking']).toMatchObject({ budgetTokens: 16000 })
   })
 
   it('does not add thinking options when reasoning_effort is absent', () => {
     const req = makeReq()
     const result = adapter.transformRequest(req) as GatewayRequest
-    const anthropicOptions = (result.providerOptions as Record<string, unknown> | undefined)?.['anthropic']
+    const anthropicOptions = (result.providerOptions as Record<string, unknown> | undefined)?.[
+      'anthropic'
+    ]
     expect(anthropicOptions).toBeUndefined()
   })
 

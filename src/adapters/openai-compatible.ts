@@ -1,6 +1,6 @@
 import type { LanguageModel } from 'ai'
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
-import type { LanguageModelV3, LanguageModelV3StreamPart } from '@ai-sdk/provider'
+import type { LanguageModelV3StreamPart } from '@ai-sdk/provider'
 import type { ChannelConfig } from '../types.js'
 import type { ProviderAdapter, AdapterRequestError, GatewayRequest } from './types.js'
 
@@ -17,7 +17,11 @@ export class OpenAICompatibleAdapter implements ProviderAdapter {
     }
   }
 
-  createModel(channelConfig: ChannelConfig, modelId: string, _deploymentId?: string): LanguageModel {
+  createModel(
+    channelConfig: ChannelConfig,
+    modelId: string,
+    _deploymentId?: string
+  ): LanguageModel {
     if (channelConfig.type !== 'openai-compatible') {
       throw new Error(
         `OpenAICompatibleAdapter requires channel type 'openai-compatible', got '${channelConfig.type}'`

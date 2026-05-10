@@ -1,4 +1,4 @@
-import type { AppConfig, ChannelConfig, ResolvedRoute } from '../types.js'
+import type { AppConfig, ResolvedRoute } from '../types.js'
 import type { ProviderAdapter } from '../adapters/types.js'
 
 export function resolveRoute(
@@ -9,7 +9,7 @@ export function resolveRoute(
   const modelConfig = config.models[alias]
   if (!modelConfig) return null
 
-  const channelConfig = config.channels.find(ch => ch.name === modelConfig.channel)
+  const channelConfig = config.channels.find((ch) => ch.name === modelConfig.channel)
   if (!channelConfig) return null
 
   const adapter = adapterRegistry.get(modelConfig.channel)

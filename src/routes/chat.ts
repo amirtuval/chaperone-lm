@@ -42,7 +42,11 @@ export function makeChatHandler(config: AppConfig, adapterRegistry: Map<string, 
     }
 
     // 3. Create model + call streamText
-    const model = route.adapter.createModel(route.channelConfig, route.upstreamModelId, route.deploymentId)
+    const model = route.adapter.createModel(
+      route.channelConfig,
+      route.upstreamModelId,
+      route.deploymentId
+    )
 
     const messages = (transformed.messages ?? []) as ModelMessage[]
 

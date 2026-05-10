@@ -21,5 +21,5 @@ const ADAPTER_MAP: Record<ChannelType, AdapterConstructor> = {
 }
 
 export function buildAdapterRegistry(channels: ChannelConfig[]): Map<string, ProviderAdapter> {
-  return new Map(channels.map(ch => [ch.name, new ADAPTER_MAP[ch.type]()] as const))
+  return new Map(channels.map((ch) => [ch.name, new ADAPTER_MAP[ch.type]()] as const))
 }

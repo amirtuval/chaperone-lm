@@ -22,7 +22,11 @@ describe('OpenAIAdapter.transformRequest', () => {
 
   it('strips non-OpenAI providerOptions (anthropic, google) but keeps openai options', () => {
     const req = makeReq({
-      providerOptions: { anthropic: { thinking: true }, google: { safetySettings: [] }, openai: { foo: 'bar' } },
+      providerOptions: {
+        anthropic: { thinking: true },
+        google: { safetySettings: [] },
+        openai: { foo: 'bar' },
+      },
     })
     const result = adapter.transformRequest(req) as GatewayRequest
     const opts = result.providerOptions as Record<string, unknown>
@@ -36,7 +40,10 @@ describe('OpenAIAdapter.transformRequest', () => {
     const result = adapter.transformRequest(req) as GatewayRequest
     expect(result.max_tokens).toBeUndefined()
     expect(result.temperature).toBeUndefined()
-    const openaiOpts = (result.providerOptions as Record<string, unknown>)?.['openai'] as Record<string, unknown>
+    const openaiOpts = (result.providerOptions as Record<string, unknown>)?.['openai'] as Record<
+      string,
+      unknown
+    >
     expect(openaiOpts?.['maxCompletionTokens']).toBe(1000)
   })
 
@@ -44,7 +51,10 @@ describe('OpenAIAdapter.transformRequest', () => {
     const req = makeReq({ model: 'o3-mini', max_tokens: 2000, temperature: 1 })
     const result = adapter.transformRequest(req) as GatewayRequest
     expect(result.max_tokens).toBeUndefined()
-    const openaiOpts = (result.providerOptions as Record<string, unknown>)?.['openai'] as Record<string, unknown>
+    const openaiOpts = (result.providerOptions as Record<string, unknown>)?.['openai'] as Record<
+      string,
+      unknown
+    >
     expect(openaiOpts?.['maxCompletionTokens']).toBe(2000)
   })
 

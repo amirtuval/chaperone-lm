@@ -17,13 +17,17 @@ function makeModel(parts: any[]) {
 function mockRes() {
   const chunks: string[] = []
   let jsonBody: unknown = null
-  let statusCode = 200
+  const statusCode = 200
   return {
     setHeader: vi.fn(),
     flushHeaders: vi.fn(),
-    write: vi.fn((chunk: string) => { chunks.push(chunk) }),
+    write: vi.fn((chunk: string) => {
+      chunks.push(chunk)
+    }),
     end: vi.fn(),
-    json: vi.fn((body: unknown) => { jsonBody = body }),
+    json: vi.fn((body: unknown) => {
+      jsonBody = body
+    }),
     status: vi.fn().mockReturnThis(),
     headersSent: false,
     getChunks: () => chunks,
@@ -36,7 +40,10 @@ function mockRes() {
 const finishPart = (reason = 'stop') => ({
   type: 'finish',
   finishReason: { unified: reason, provider: reason },
-  usage: { inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: 2, textTokens: 2, reasoningTokens: 0 } },
+  usage: {
+    inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 },
+    outputTokens: { total: 2, textTokens: 2, reasoningTokens: 0 },
+  },
 })
 
 describe('serializeResponse — streaming', () => {
@@ -52,7 +59,7 @@ describe('serializeResponse — streaming', () => {
     await serializeResponse(result as any, 'my-model', true, res as never)
 
     const chunks = res.getChunks()
-    const dataLines = chunks.filter(c => c.startsWith('data: '))
+    const dataLines = chunks.filter((c) => c.startsWith('data: '))
     expect(dataLines.at(-1)).toBe('data: [DONE]\n\n')
 
     const firstChunk = JSON.parse(dataLines[0].replace('data: ', ''))
@@ -76,7 +83,14 @@ describe('serializeResponse — non-streaming', () => {
     const model = makeModel([
       { type: 'text-delta', id: '1', delta: 'Hi' },
       { type: 'text-delta', id: '2', delta: ' there' },
-      { type: 'finish', finishReason: { unified: 'stop', provider: 'stop' }, usage: { inputTokens: { total: 3, noCache: 3, cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: 2, textTokens: 2, reasoningTokens: 0 } } },
+      {
+        type: 'finish',
+        finishReason: { unified: 'stop', provider: 'stop' },
+        usage: {
+          inputTokens: { total: 3, noCache: 3, cacheRead: 0, cacheWrite: 0 },
+          outputTokens: { total: 2, textTokens: 2, reasoningTokens: 0 },
+        },
+      },
     ])
     const result = streamText({ model, messages: [{ role: 'user', content: 'hi' }] })
     const res = mockRes()
@@ -86,7 +100,10 @@ describe('serializeResponse — non-streaming', () => {
     const body = res.getJson() as Record<string, unknown>
     expect(body.object).toBe('chat.completion')
     expect(body.model).toBe('my-model')
-    const choices = body.choices as Array<{ message: { content: string; role: string }; finish_reason: string }>
+    const choices = body.choices as Array<{
+      message: { content: string; role: string }
+      finish_reason: string
+    }>
     expect(choices[0].message.content).toBe('Hi there')
     expect(choices[0].finish_reason).toBe('stop')
   })
@@ -94,7 +111,14 @@ describe('serializeResponse — non-streaming', () => {
   it('includes usage tokens in the response', async () => {
     const model = makeModel([
       { type: 'text-delta', id: '1', delta: 'ok' },
-      { type: 'finish', finishReason: { unified: 'stop', provider: 'stop' }, usage: { inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: 5, textTokens: 5, reasoningTokens: 0 } } },
+      {
+        type: 'finish',
+        finishReason: { unified: 'stop', provider: 'stop' },
+        usage: {
+          inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
+          outputTokens: { total: 5, textTokens: 5, reasoningTokens: 0 },
+        },
+      },
     ])
     const result = streamText({ model, messages: [{ role: 'user', content: 'hi' }] })
     const res = mockRes()
@@ -114,7 +138,14 @@ describe('serializeResponse — tool calls', () => {
       { type: 'tool-input-start', id: 'call-1', toolName: 'get_weather' },
       { type: 'tool-input-delta', id: 'call-1', delta: '{"city":' },
       { type: 'tool-input-delta', id: 'call-1', delta: '"London"}' },
-      { type: 'finish', finishReason: { unified: 'tool-calls', provider: 'tool_use' }, usage: { inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: 5, textTokens: 5, reasoningTokens: 0 } } },
+      {
+        type: 'finish',
+        finishReason: { unified: 'tool-calls', provider: 'tool_use' },
+        usage: {
+          inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 },
+          outputTokens: { total: 5, textTokens: 5, reasoningTokens: 0 },
+        },
+      },
     ])
     const result = streamText({
       model,
@@ -127,7 +158,8 @@ describe('serializeResponse — tool calls', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await serializeResponse(result as any, 'my-model', true, res as never)
 
-    const dataLines = res.getChunks()
+    const dataLines = res
+      .getChunks()
       .filter((c: string) => c.startsWith('data: ') && !c.includes('[DONE]'))
       .map((c: string) => JSON.parse(c.replace('data: ', '')))
 
@@ -136,14 +168,20 @@ describe('serializeResponse — tool calls', () => {
       return choices?.[0]?.delta?.tool_calls?.[0]?.id === 'call-1'
     })
     expect(startChunk).toBeDefined()
-    const toolCall = (startChunk.choices as Array<{ delta: { tool_calls: Array<Record<string, unknown>> } }>)[0].delta.tool_calls[0]
+    const toolCall = (
+      startChunk.choices as Array<{ delta: { tool_calls: Array<Record<string, unknown>> } }>
+    )[0].delta.tool_calls[0]
     expect(toolCall['type']).toBe('function')
     expect((toolCall['function'] as Record<string, unknown>)['name']).toBe('get_weather')
 
     const deltaChunks = dataLines.filter((c: Record<string, unknown>) => {
-      const choices = c.choices as Array<{ delta: { tool_calls?: Array<{ function?: { arguments?: string } }> } }>
-      return choices?.[0]?.delta?.tool_calls?.[0]?.function?.arguments !== undefined &&
-             choices?.[0]?.delta?.tool_calls?.[0]?.function?.arguments !== ''
+      const choices = c.choices as Array<{
+        delta: { tool_calls?: Array<{ function?: { arguments?: string } }> }
+      }>
+      return (
+        choices?.[0]?.delta?.tool_calls?.[0]?.function?.arguments !== undefined &&
+        choices?.[0]?.delta?.tool_calls?.[0]?.function?.arguments !== ''
+      )
     })
     expect(deltaChunks.length).toBeGreaterThan(0)
   })

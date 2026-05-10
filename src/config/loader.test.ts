@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import { writeFileSync, unlinkSync } from 'fs'
 import { loadConfig } from './loader.js'
 
@@ -9,7 +9,11 @@ function write(content: string) {
 }
 
 afterEach(() => {
-  try { unlinkSync(TMP) } catch {}
+  try {
+    unlinkSync(TMP)
+  } catch {
+    // file may not exist between tests — ignore
+  }
 })
 
 describe('loadConfig', () => {
@@ -27,8 +31,15 @@ models:
 `)
     const config = loadConfig(TMP)
     expect(config.channels).toHaveLength(1)
-    expect(config.channels[0]).toMatchObject({ name: 'my-anthropic', type: 'anthropic', apiKey: 'sk-test-123' })
-    expect(config.models['claude']).toMatchObject({ channel: 'my-anthropic', model: 'claude-sonnet-4-5' })
+    expect(config.channels[0]).toMatchObject({
+      name: 'my-anthropic',
+      type: 'anthropic',
+      apiKey: 'sk-test-123',
+    })
+    expect(config.models['claude']).toMatchObject({
+      channel: 'my-anthropic',
+      model: 'claude-sonnet-4-5',
+    })
     delete process.env['TEST_API_KEY']
   })
 

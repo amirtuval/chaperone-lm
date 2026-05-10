@@ -1,6 +1,6 @@
 import type { LanguageModel } from 'ai'
 import { createAzure } from '@ai-sdk/azure'
-import type { LanguageModelV3, LanguageModelV3StreamPart } from '@ai-sdk/provider'
+import type { LanguageModelV3StreamPart } from '@ai-sdk/provider'
 import type { ChannelConfig } from '../types.js'
 import type { ProviderAdapter, AdapterRequestError, GatewayRequest } from './types.js'
 
@@ -8,10 +8,10 @@ export class AzureAdapter implements ProviderAdapter {
   transformRequest(req: GatewayRequest): GatewayRequest | AdapterRequestError {
     const transformed = { ...req }
 
-    // Strip non-OpenAI providerOptions
+    // Strip non-OpenAI providerOptions — keep only the openai key
     if (transformed.providerOptions) {
-      const { anthropic: _a, google: _g, ...rest } = transformed.providerOptions as Record<string, unknown>
-      const openaiOptions = (rest as { openai?: unknown }).openai
+      const opts = transformed.providerOptions as Record<string, unknown>
+      const openaiOptions = opts['openai']
       transformed.providerOptions = openaiOptions !== undefined ? { openai: openaiOptions } : {}
     }
 
@@ -22,7 +22,9 @@ export class AzureAdapter implements ProviderAdapter {
         transformed.providerOptions = {
           ...(transformed.providerOptions ?? {}),
           openai: {
-            ...((transformed.providerOptions as Record<string, unknown> | undefined)?.['openai'] as Record<string, unknown> | undefined ?? {}),
+            ...(((transformed.providerOptions as Record<string, unknown> | undefined)?.[
+              'openai'
+            ] as Record<string, unknown> | undefined) ?? {}),
             maxCompletionTokens: transformed.max_tokens,
           },
         }

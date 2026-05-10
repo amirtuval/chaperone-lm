@@ -31,7 +31,10 @@ describe('AzureAdapter.transformRequest', () => {
     const result = adapter.transformRequest(req) as GatewayRequest
     expect(result.max_tokens).toBeUndefined()
     expect(result.temperature).toBeUndefined()
-    const openaiOpts = (result.providerOptions as Record<string, unknown>)?.['openai'] as Record<string, unknown>
+    const openaiOpts = (result.providerOptions as Record<string, unknown>)?.['openai'] as Record<
+      string,
+      unknown
+    >
     expect(openaiOpts?.['maxCompletionTokens']).toBe(800)
   })
 })

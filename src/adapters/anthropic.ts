@@ -2,7 +2,7 @@ import type { LanguageModel } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
 import { createVertex } from '@ai-sdk/google-vertex'
-import type { LanguageModelV3, LanguageModelV3StreamPart } from '@ai-sdk/provider'
+import type { LanguageModelV3StreamPart } from '@ai-sdk/provider'
 import type { ChannelConfig } from '../types.js'
 import type { ProviderAdapter, AdapterRequestError, GatewayRequest } from './types.js'
 import { httpError } from './errors.js'
@@ -18,12 +18,12 @@ export class AnthropicAdapter implements ProviderAdapter {
     const transformed = { ...req }
 
     // Merge multiple system messages into one
-    const systemMessages = transformed.messages.filter(m => m.role === 'system')
-    const nonSystemMessages = transformed.messages.filter(m => m.role !== 'system')
+    const systemMessages = transformed.messages.filter((m) => m.role === 'system')
+    const nonSystemMessages = transformed.messages.filter((m) => m.role !== 'system')
 
     if (systemMessages.length > 1) {
       const merged = systemMessages
-        .map(m => (typeof m.content === 'string' ? m.content : ''))
+        .map((m) => (typeof m.content === 'string' ? m.content : ''))
         .join('\n\n')
       transformed.messages = [{ role: 'system', content: merged }, ...nonSystemMessages]
     }
@@ -39,7 +39,9 @@ export class AnthropicAdapter implements ProviderAdapter {
       transformed.providerOptions = {
         ...(transformed.providerOptions ?? {}),
         anthropic: {
-          ...((transformed.providerOptions as Record<string, unknown> | undefined)?.['anthropic'] as Record<string, unknown> | undefined ?? {}),
+          ...(((transformed.providerOptions as Record<string, unknown> | undefined)?.[
+            'anthropic'
+          ] as Record<string, unknown> | undefined) ?? {}),
           thinking: { type: 'enabled', budgetTokens: budget },
         },
       }
@@ -59,16 +61,24 @@ export class AnthropicAdapter implements ProviderAdapter {
     }
   }
 
-  createModel(channelConfig: ChannelConfig, modelId: string, _deploymentId?: string): LanguageModel {
+  createModel(
+    channelConfig: ChannelConfig,
+    modelId: string,
+    _deploymentId?: string
+  ): LanguageModel {
     switch (channelConfig.type) {
       case 'anthropic':
         return createAnthropic({ apiKey: channelConfig.apiKey })(modelId)
       case 'bedrock':
         return createAmazonBedrock({ region: channelConfig.region })(modelId)
       case 'vertex':
-        return createVertex({ project: channelConfig.project, location: channelConfig.region })(modelId)
+        return createVertex({ project: channelConfig.project, location: channelConfig.region })(
+          modelId
+        )
       default:
-        throw new Error(`AnthropicAdapter does not support channel type: ${(channelConfig as ChannelConfig).type}`)
+        throw new Error(
+          `AnthropicAdapter does not support channel type: ${(channelConfig as ChannelConfig).type}`
+        )
     }
   }
 }

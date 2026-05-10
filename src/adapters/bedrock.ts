@@ -1,6 +1,6 @@
 import type { LanguageModel } from 'ai'
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
-import type { LanguageModelV3, LanguageModelV3StreamPart } from '@ai-sdk/provider'
+import type { LanguageModelV3StreamPart } from '@ai-sdk/provider'
 import type { ChannelConfig } from '../types.js'
 import type { ProviderAdapter, AdapterRequestError, GatewayRequest } from './types.js'
 
@@ -17,7 +17,11 @@ export class BedrockAdapter implements ProviderAdapter {
     }
   }
 
-  createModel(channelConfig: ChannelConfig, modelId: string, _deploymentId?: string): LanguageModel {
+  createModel(
+    channelConfig: ChannelConfig,
+    modelId: string,
+    _deploymentId?: string
+  ): LanguageModel {
     if (channelConfig.type !== 'bedrock') {
       throw new Error(`BedrockAdapter requires channel type 'bedrock', got '${channelConfig.type}'`)
     }

@@ -18,6 +18,8 @@ export interface AdapterRequestError {
 
 export interface ProviderAdapter {
   transformRequest(req: GatewayRequest): GatewayRequest | AdapterRequestError
-  transformResponse(stream: AsyncIterable<LanguageModelV3StreamPart>): AsyncIterable<LanguageModelV3StreamPart>
+  transformResponse(
+    stream: AsyncIterable<LanguageModelV3StreamPart>
+  ): AsyncIterable<LanguageModelV3StreamPart>
   createModel(channelConfig: ChannelConfig, modelId: string, deploymentId?: string): LanguageModel
 }
