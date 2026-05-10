@@ -1,0 +1,2 @@
+# Do not ignore ephemeral-docs - allow Tabnine to read/write there
+!ephemeral-docs/
