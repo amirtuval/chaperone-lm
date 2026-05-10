@@ -1,7 +1,7 @@
 import type { LanguageModel } from 'ai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createVertex } from '@ai-sdk/google-vertex'
-import type { LanguageModelV3, LanguageModelV3StreamPart } from '@ai-sdk/provider'
+import type { LanguageModelV3StreamPart } from '@ai-sdk/provider'
 import type { ChannelConfig } from '../types.js'
 import type { ProviderAdapter, AdapterRequestError, GatewayRequest } from './types.js'
 
@@ -17,15 +17,18 @@ export class GoogleAdapter implements ProviderAdapter {
     const transformed = { ...req }
 
     // Extract system messages and move to providerOptions.google.systemInstruction
-    const systemMessages = transformed.messages.filter(m => m.role === 'system')
+    const systemMessages = transformed.messages.filter((m) => m.role === 'system')
     if (systemMessages.length > 0) {
       const systemText = systemMessages
-        .map(m => (typeof m.content === 'string' ? m.content : ''))
+        .map((m) => (typeof m.content === 'string' ? m.content : ''))
         .join('\n\n')
 
-      transformed.messages = transformed.messages.filter(m => m.role !== 'system')
+      transformed.messages = transformed.messages.filter((m) => m.role !== 'system')
 
-      const existingGoogle = (transformed.providerOptions as Record<string, unknown> | undefined)?.['google'] as Record<string, unknown> | undefined ?? {}
+      const existingGoogle =
+        ((transformed.providerOptions as Record<string, unknown> | undefined)?.['google'] as
+          | Record<string, unknown>
+          | undefined) ?? {}
       transformed.providerOptions = {
         ...(transformed.providerOptions ?? {}),
         google: {
@@ -36,7 +39,10 @@ export class GoogleAdapter implements ProviderAdapter {
     }
 
     // Apply default safety settings if not present
-    const googleOptions = (transformed.providerOptions as Record<string, unknown> | undefined)?.['google'] as Record<string, unknown> | undefined ?? {}
+    const googleOptions =
+      ((transformed.providerOptions as Record<string, unknown> | undefined)?.['google'] as
+        | Record<string, unknown>
+        | undefined) ?? {}
     if (!googleOptions['safetySettings']) {
       transformed.providerOptions = {
         ...(transformed.providerOptions ?? {}),
@@ -58,14 +64,22 @@ export class GoogleAdapter implements ProviderAdapter {
     }
   }
 
-  createModel(channelConfig: ChannelConfig, modelId: string, _deploymentId?: string): LanguageModel {
+  createModel(
+    channelConfig: ChannelConfig,
+    modelId: string,
+    _deploymentId?: string
+  ): LanguageModel {
     switch (channelConfig.type) {
       case 'google':
         return createGoogleGenerativeAI({ apiKey: channelConfig.apiKey })(modelId)
       case 'vertex':
-        return createVertex({ project: channelConfig.project, location: channelConfig.region })(modelId)
+        return createVertex({ project: channelConfig.project, location: channelConfig.region })(
+          modelId
+        )
       default:
-        throw new Error(`GoogleAdapter does not support channel type: ${(channelConfig as ChannelConfig).type}`)
+        throw new Error(
+          `GoogleAdapter does not support channel type: ${(channelConfig as ChannelConfig).type}`
+        )
     }
   }
 }

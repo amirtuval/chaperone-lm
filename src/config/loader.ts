@@ -54,7 +54,12 @@ function normalise(raw: unknown): unknown {
 
   const obj = raw as Record<string, unknown>
 
-  if ('channels' in obj && obj.channels !== null && typeof obj.channels === 'object' && !Array.isArray(obj.channels)) {
+  if (
+    'channels' in obj &&
+    obj.channels !== null &&
+    typeof obj.channels === 'object' &&
+    !Array.isArray(obj.channels)
+  ) {
     const channelsMap = obj.channels as Record<string, unknown>
     const channelsArray = Object.entries(channelsMap).map(([name, config]) => {
       if (config !== null && typeof config === 'object' && !Array.isArray(config)) {
@@ -73,7 +78,9 @@ export function loadConfig(filePath: string): AppConfig {
   try {
     fileContent = readFileSync(filePath, 'utf-8')
   } catch (err) {
-    throw new Error(`Failed to read config file "${filePath}": ${(err as Error).message}`)
+    throw new Error(`Failed to read config file "${filePath}": ${(err as Error).message}`, {
+      cause: err,
+    })
   }
 
   const raw = parseYaml(fileContent)
@@ -83,7 +90,7 @@ export function loadConfig(filePath: string): AppConfig {
   const parseResult = appConfigSchema.safeParse(resolved)
   if (!parseResult.success) {
     const issues = parseResult.error.issues
-      .map(i => `  - ${i.path.join('.')}: ${i.message}`)
+      .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
       .join('\n')
     throw new Error(`Invalid configuration:\n${issues}`)
   }
@@ -91,7 +98,7 @@ export function loadConfig(filePath: string): AppConfig {
   const config = parseResult.data as AppConfig
 
   // Validate that every models[x].channel references a declared channel name
-  const channelNames = new Set(config.channels.map(ch => ch.name))
+  const channelNames = new Set(config.channels.map((ch) => ch.name))
   for (const [alias, modelConfig] of Object.entries(config.models)) {
     if (!channelNames.has(modelConfig.channel)) {
       throw new Error(

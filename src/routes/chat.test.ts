@@ -28,7 +28,9 @@ const config: AppConfig = {
 function makeAdapter(model: LanguageModel): ProviderAdapter {
   return {
     transformRequest: (req: GatewayRequest) => req,
-    transformResponse: async function* (stream) { yield* stream },
+    transformResponse: async function* (stream) {
+      yield* stream
+    },
     createModel: () => model,
   }
 }
@@ -41,9 +43,15 @@ function makeApp(model: LanguageModel) {
 
 describe('POST /v1/chat/completions', () => {
   it('returns 404 for an unknown model', async () => {
-    const app = makeApp(makeModel([
-      { type: 'finish', finishReason: { unified: 'stop', provider: 'stop' }, usage: { inputTokens: { total: 1 }, outputTokens: { total: 1 } } },
-    ]))
+    const app = makeApp(
+      makeModel([
+        {
+          type: 'finish',
+          finishReason: { unified: 'stop', provider: 'stop' },
+          usage: { inputTokens: { total: 1 }, outputTokens: { total: 1 } },
+        },
+      ])
+    )
     const res = await request(app)
       .post('/v1/chat/completions')
       .send({ model: 'nonexistent', messages: [{ role: 'user', content: 'hi' }] })
@@ -52,10 +60,16 @@ describe('POST /v1/chat/completions', () => {
   })
 
   it('returns a non-streaming chat.completion for stream: false', async () => {
-    const app = makeApp(makeModel([
-      { type: 'text-delta', id: '1', delta: 'Hello!' },
-      { type: 'finish', finishReason: { unified: 'stop', provider: 'stop' }, usage: { inputTokens: { total: 5 }, outputTokens: { total: 3 } } },
-    ]))
+    const app = makeApp(
+      makeModel([
+        { type: 'text-delta', id: '1', delta: 'Hello!' },
+        {
+          type: 'finish',
+          finishReason: { unified: 'stop', provider: 'stop' },
+          usage: { inputTokens: { total: 5 }, outputTokens: { total: 3 } },
+        },
+      ])
+    )
     const res = await request(app)
       .post('/v1/chat/completions')
       .send({ model: 'test-model', messages: [{ role: 'user', content: 'hi' }], stream: false })
@@ -65,10 +79,16 @@ describe('POST /v1/chat/completions', () => {
   })
 
   it('returns SSE chunks for stream: true', async () => {
-    const app = makeApp(makeModel([
-      { type: 'text-delta', id: '1', delta: 'Streaming!' },
-      { type: 'finish', finishReason: { unified: 'stop', provider: 'stop' }, usage: { inputTokens: { total: 5 }, outputTokens: { total: 3 } } },
-    ]))
+    const app = makeApp(
+      makeModel([
+        { type: 'text-delta', id: '1', delta: 'Streaming!' },
+        {
+          type: 'finish',
+          finishReason: { unified: 'stop', provider: 'stop' },
+          usage: { inputTokens: { total: 5 }, outputTokens: { total: 3 } },
+        },
+      ])
+    )
     const res = await request(app)
       .post('/v1/chat/completions')
       .send({ model: 'test-model', messages: [{ role: 'user', content: 'hi' }], stream: true })
@@ -81,9 +101,14 @@ describe('POST /v1/chat/completions', () => {
   it('returns the adapter error when transformRequest rejects', async () => {
     const rejectingAdapter: ProviderAdapter = {
       transformRequest: (_req: GatewayRequest) => ({
-        writeError: (res) => res.status(422).json({ error: { message: 'Rejected by adapter', type: 'invalid_request_error' } }),
+        writeError: (res) =>
+          res
+            .status(422)
+            .json({ error: { message: 'Rejected by adapter', type: 'invalid_request_error' } }),
       }),
-      transformResponse: async function* (stream) { yield* stream },
+      transformResponse: async function* (stream) {
+        yield* stream
+      },
       createModel: () => makeModel([]),
     }
     const registry = new Map<string, ProviderAdapter>([['test-channel', rejectingAdapter]])
