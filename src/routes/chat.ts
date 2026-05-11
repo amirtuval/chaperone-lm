@@ -13,9 +13,7 @@ function isAdapterError(result: unknown): result is { writeError: (res: Response
 // Convert OpenAI-format tool definitions to AI SDK tool() objects.
 // OpenAI shape: { type: 'function', function: { name, description?, parameters } }
 // AI SDK shape: Record<string, Tool>
-function buildTools(
-  rawTools: GatewayRequest['tools']
-): Record<string, Tool> | undefined {
+function buildTools(rawTools: GatewayRequest['tools']): Record<string, Tool> | undefined {
   if (!rawTools || rawTools.length === 0) return undefined
   const result: Record<string, Tool> = {}
   for (const raw of rawTools) {
@@ -24,7 +22,7 @@ function buildTools(
     result[fn.name] = tool({
       description: fn.description,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      inputSchema: jsonSchema(fn.parameters as any ?? { type: 'object', properties: {} }),
+      inputSchema: jsonSchema((fn.parameters as any) ?? { type: 'object', properties: {} }),
     })
   }
   return Object.keys(result).length > 0 ? result : undefined

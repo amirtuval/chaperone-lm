@@ -74,10 +74,7 @@ describe('serializeResponse — streaming', () => {
   })
 
   it('emits a correct full SSE sequence: role → text → finish → [DONE]', async () => {
-    const model = makeModel([
-      { type: 'text-delta', id: '1', delta: 'Hi' },
-      finishPart('stop'),
-    ])
+    const model = makeModel([{ type: 'text-delta', id: '1', delta: 'Hi' }, finishPart('stop')])
     const result = streamText({ model, messages: [{ role: 'user', content: 'hi' }] })
     const res = mockRes()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -100,7 +97,9 @@ describe('serializeResponse — streaming', () => {
     expect(parsed[0].choices[0].delta).toEqual({ role: 'assistant', content: '' })
 
     // at least one text chunk
-    const textChunks = parsed.filter((c) => typeof c.choices[0].delta.content === 'string' && c.choices[0].delta.content.length > 0)
+    const textChunks = parsed.filter(
+      (c) => typeof c.choices[0].delta.content === 'string' && c.choices[0].delta.content.length > 0
+    )
     expect(textChunks.length).toBeGreaterThan(0)
 
     // finish chunk is last: empty delta, finish_reason set
