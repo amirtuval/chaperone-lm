@@ -36,21 +36,27 @@ describe.skipIf(!hasCredentials)('Vertex — Gemini 2.5 Flash — integration', 
   })
 })
 
-describe.skipIf(!hasCredentials)('Vertex — Claude Sonnet 4.6 (Anthropic backend) — integration', () => {
-  runProviderSuite({
-    app: makeApp('vertex-anthropic', 'anthropic', 'claude-sonnet', 'claude-sonnet-4-6', ANTHROPIC_REGION),
-    modelAlias: 'claude-sonnet',
-    strictFinishReason: true,
-  })
-})
-
 describe.skipIf(!hasCredentials)(
-  'Vertex — DeepSeek V3.2 (MaaS backend) — integration',
+  'Vertex — Claude Sonnet 4.6 (Anthropic backend) — integration',
   () => {
     runProviderSuite({
-      app: makeApp('vertex-maas', 'maas', 'deepseek-v3', 'deepseek-ai/deepseek-v3.2-maas@001'),
-      modelAlias: 'deepseek-v3',
-      strictFinishReason: false,
+      app: makeApp(
+        'vertex-anthropic',
+        'anthropic',
+        'claude-sonnet',
+        'claude-sonnet-4-6',
+        ANTHROPIC_REGION
+      ),
+      modelAlias: 'claude-sonnet',
+      strictFinishReason: true,
     })
   }
 )
+
+describe.skipIf(!hasCredentials)('Vertex — DeepSeek V3.2 (MaaS backend) — integration', () => {
+  runProviderSuite({
+    app: makeApp('vertex-maas', 'maas', 'deepseek-v3', 'deepseek-ai/deepseek-v3.2-maas@001'),
+    modelAlias: 'deepseek-v3',
+    strictFinishReason: false,
+  })
+})
