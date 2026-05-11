@@ -11,6 +11,13 @@ export interface ProviderSuiteOptions {
   modelAlias: string
   /** Whether finish_reason must strictly be 'stop' or just truthy */
   strictFinishReason?: boolean
+  /**
+   * Whether the model supports tool use. Defaults to true.
+   * Set to false to skip tool call tests for models that do not support tool use
+   * via the ConverseStream API (e.g. Meta Llama models on Bedrock — AWS supports
+   * tool use on the Converse API but not on ConverseStream, which the AI SDK always uses).
+   */
+  supportsTools?: boolean
 }
 
 const GET_WEATHER_TOOL = {
@@ -27,7 +34,8 @@ const GET_WEATHER_TOOL = {
 }
 
 export function runProviderSuite(options: ProviderSuiteOptions): void {
-  const { app, modelAlias, strictFinishReason = true } = options
+  const { app, modelAlias, strictFinishReason = true, supportsTools = true } = options
+  const itTool = supportsTools ? it : it.skip
 
   it('returns a non-streaming response (stream: false)', async () => {
     const res = await request(app)
@@ -128,7 +136,7 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
     expect(res.body.error.code).toBe('model_not_found')
   }, 30000)
 
-  it('returns a tool call in the response (stream: false)', async () => {
+  itTool('returns a tool call in the response (stream: false)', async () => {
     const res = await request(app)
       .post('/v1/chat/completions')
       .send({
@@ -152,7 +160,7 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
     expect(typeof args.city).toBe('string')
   }, 30000)
 
-  it('streams tool call chunks (stream: true)', async () => {
+  itTool('streams tool call chunks (stream: true)', async () => {
     const res = await request(app)
       .post('/v1/chat/completions')
       .send({
