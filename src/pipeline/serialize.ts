@@ -25,6 +25,16 @@ export async function serializeResponse(
     res.flushHeaders()
 
     try {
+      // OpenAI SSE spec: first chunk must establish role
+      const roleChunk = {
+        id,
+        object: 'chat.completion.chunk',
+        created,
+        model: modelAlias,
+        choices: [{ index: 0, delta: { role: 'assistant', content: '' }, finish_reason: null }],
+      }
+      res.write(`data: ${JSON.stringify(roleChunk)}\n\n`)
+
       // Track active tool calls by index for streaming deltas
       const toolCallIndexMap = new Map<string, number>()
       let toolCallCounter = 0
