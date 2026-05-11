@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       provider:
-        description: 'Provider to test (google, openrouter, bedrock, all)'
+        description: 'Provider to test (google, openrouter, bedrock, vertex, all)'
         required: false
         default: 'all'
         type: choice
@@ -15,6 +15,11 @@ on:
           - google
           - openrouter
           - bedrock
+          - vertex
+
+permissions:
+  contents: read
+  id-token: write # required for Workload Identity Federation
 
 jobs:
   integration:
@@ -30,6 +35,13 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Authenticate to Google Cloud
+        if: github.event.inputs.provider == 'vertex' || github.event.inputs.provider == 'all' || github.event_name == 'schedule'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WI_PROVIDER }}
+          service_account: ${{ secrets.WI_SA_EMAIL }}
 
       - name: Run Google integration tests
         if: github.event.inputs.provider == 'google' || github.event.inputs.provider == 'all' || github.event_name == 'schedule'
@@ -50,3 +62,9 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: us-east-1
         run: npm run test:integration -- --reporter=verbose src/adapters/__integration__/bedrock.integration.test.ts
+
+      - name: Run Vertex integration tests
+        if: github.event.inputs.provider == 'vertex' || github.event.inputs.provider == 'all' || github.event_name == 'schedule'
+        env:
+          VERTEX_PROJECT: ${{ secrets.VERTEX_PROJECT }}
+        run: npm run test:integration -- --reporter=verbose src/adapters/__integration__/vertex.integration.test.ts
