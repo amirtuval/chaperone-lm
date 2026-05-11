@@ -1,7 +1,13 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { BedrockAdapter } from './bedrock.js'
 import type { GatewayRequest } from './types.js'
 import type { ChannelConfig } from '../types.js'
+
+// Prevent real AWS credential resolution during unit tests.
+// The integration tests cover the real Bedrock API end-to-end.
+vi.mock('@ai-sdk/amazon-bedrock', () => ({
+  createAmazonBedrock: () => (modelId: string) => ({ modelId }),
+}))
 
 const adapter = new BedrockAdapter()
 
