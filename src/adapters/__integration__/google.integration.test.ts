@@ -13,7 +13,7 @@ const config: AppConfig = {
     },
   ],
   models: {
-    'gemini-flash': { channel: 'google-test', model: 'gemini-2.0-flash-lite' },
+    'gemini-flash': { channel: 'google-test', model: 'gemini-2.5-flash' },
   },
 }
 
