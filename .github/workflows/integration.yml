@@ -1,0 +1,43 @@
+name: Integration Tests
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # nightly at 02:00 UTC
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: 'Provider to test (google, openrouter, all)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - google
+          - openrouter
+
+jobs:
+  integration:
+    name: Integration tests — ${{ github.event.inputs.provider || 'all' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Google integration tests
+        if: github.event.inputs.provider == 'google' || github.event.inputs.provider == 'all' || github.event_name == 'schedule'
+        env:
+          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+        run: npm run test:integration -- --reporter=verbose
+
+      - name: Run OpenRouter integration tests
+        if: github.event.inputs.provider == 'openrouter' || github.event.inputs.provider == 'all' || github.event_name == 'schedule'
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: npm run test:integration -- --reporter=verbose
