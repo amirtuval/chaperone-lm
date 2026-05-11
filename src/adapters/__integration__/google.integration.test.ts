@@ -46,7 +46,7 @@ describe.skipIf(!process.env.GOOGLE_GENERATIVE_AI_API_KEY)(
     )
 
     it(
-      'returns SSE chunks (stream: true)',
+      'returns a well-formed SSE stream (stream: true)',
       async () => {
         const res = await request(app)
           .post('/v1/chat/completions')
@@ -60,26 +60,34 @@ describe.skipIf(!process.env.GOOGLE_GENERATIVE_AI_API_KEY)(
         expect(res.headers['content-type']).toContain('text/event-stream')
 
         const lines = res.text.split('\n').filter((l) => l.startsWith('data: '))
-        const lastDataLine = lines[lines.length - 1]
-        expect(lastDataLine).toBe('data: [DONE]')
+        expect(lines.at(-1)).toBe('data: [DONE]')
 
-        const contentChunks = lines
+        const chunks = lines
           .filter((l) => l !== 'data: [DONE]')
-          .map((l) => {
-            try {
-              return JSON.parse(l.slice('data: '.length))
-            } catch {
-              return null
-            }
-          })
-          .filter(
-            (chunk) =>
-              chunk !== null &&
-              typeof chunk.choices?.[0]?.delta?.content === 'string' &&
-              chunk.choices[0].delta.content.length > 0
-          )
+          .map((l) => JSON.parse(l.slice('data: '.length)))
 
-        expect(contentChunks.length).toBeGreaterThan(0)
+        // Every chunk has the correct envelope
+        for (const c of chunks) {
+          expect(c.object).toBe('chat.completion.chunk')
+          expect(c.model).toBe('gemini-flash')
+          expect(typeof c.id).toBe('string')
+          expect(typeof c.created).toBe('number')
+        }
+
+        // First chunk establishes role
+        expect(chunks[0].choices[0].delta).toEqual({ role: 'assistant', content: '' })
+        expect(chunks[0].choices[0].finish_reason).toBeNull()
+
+        // At least one chunk carries non-empty text content
+        const textChunks = chunks.filter(
+          (c) => typeof c.choices[0].delta.content === 'string' && c.choices[0].delta.content.length > 0
+        )
+        expect(textChunks.length).toBeGreaterThan(0)
+
+        // Finish chunk: empty delta, finish_reason 'stop'
+        const finishChunk = chunks.at(-1)
+        expect(finishChunk.choices[0].delta).toEqual({})
+        expect(finishChunk.choices[0].finish_reason).toBe('stop')
       },
       30000
     )

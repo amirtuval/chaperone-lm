@@ -47,7 +47,7 @@ const finishPart = (reason = 'stop') => ({
 })
 
 describe('serializeResponse — streaming', () => {
-  it('emits SSE text-delta chunks and [DONE]', async () => {
+  it('emits role chunk first, then text-delta chunks, then [DONE]', async () => {
     const model = makeModel([
       { type: 'text-delta', id: '1', delta: 'Hello' },
       { type: 'text-delta', id: '2', delta: ' world' },
@@ -58,14 +58,58 @@ describe('serializeResponse — streaming', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await serializeResponse(result as any, 'my-model', true, res as never)
 
-    const chunks = res.getChunks()
-    const dataLines = chunks.filter((c) => c.startsWith('data: '))
+    const dataLines = res.getChunks().filter((c) => c.startsWith('data: '))
     expect(dataLines.at(-1)).toBe('data: [DONE]\n\n')
 
-    const firstChunk = JSON.parse(dataLines[0].replace('data: ', ''))
-    expect(firstChunk.object).toBe('chat.completion.chunk')
-    expect(firstChunk.model).toBe('my-model')
-    expect(firstChunk.choices[0].delta.content).toBe('Hello')
+    // First chunk: role establishment
+    const roleChunk = JSON.parse(dataLines[0].replace('data: ', ''))
+    expect(roleChunk.object).toBe('chat.completion.chunk')
+    expect(roleChunk.model).toBe('my-model')
+    expect(roleChunk.choices[0].delta).toEqual({ role: 'assistant', content: '' })
+    expect(roleChunk.choices[0].finish_reason).toBeNull()
+
+    // Second chunk: first text delta
+    const firstTextChunk = JSON.parse(dataLines[1].replace('data: ', ''))
+    expect(firstTextChunk.choices[0].delta.content).toBe('Hello')
+  })
+
+  it('emits a correct full SSE sequence: role → text → finish → [DONE]', async () => {
+    const model = makeModel([
+      { type: 'text-delta', id: '1', delta: 'Hi' },
+      finishPart('stop'),
+    ])
+    const result = streamText({ model, messages: [{ role: 'user', content: 'hi' }] })
+    const res = mockRes()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await serializeResponse(result as any, 'my-model', true, res as never)
+
+    const dataLines = res.getChunks().filter((c) => c.startsWith('data: '))
+    const parsed = dataLines
+      .filter((l) => !l.includes('[DONE]'))
+      .map((l) => JSON.parse(l.replace('data: ', '')))
+
+    // Every chunk has the correct envelope fields
+    for (const c of parsed) {
+      expect(c.object).toBe('chat.completion.chunk')
+      expect(c.model).toBe('my-model')
+      expect(typeof c.id).toBe('string')
+      expect(typeof c.created).toBe('number')
+    }
+
+    // role chunk is first
+    expect(parsed[0].choices[0].delta).toEqual({ role: 'assistant', content: '' })
+
+    // at least one text chunk
+    const textChunks = parsed.filter((c) => typeof c.choices[0].delta.content === 'string' && c.choices[0].delta.content.length > 0)
+    expect(textChunks.length).toBeGreaterThan(0)
+
+    // finish chunk is last: empty delta, finish_reason set
+    const finishChunk = parsed.at(-1)
+    expect(finishChunk.choices[0].delta).toEqual({})
+    expect(finishChunk.choices[0].finish_reason).toBe('stop')
+
+    // stream ends with [DONE]
+    expect(dataLines.at(-1)).toBe('data: [DONE]\n\n')
   })
 
   it('emits Content-Type text/event-stream header', async () => {
