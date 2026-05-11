@@ -136,70 +136,80 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
     expect(res.body.error.code).toBe('model_not_found')
   }, 30000)
 
-  itTool('returns a tool call in the response (stream: false)', async () => {
-    const res = await request(app)
-      .post('/v1/chat/completions')
-      .send({
-        model: modelAlias,
-        messages: [{ role: 'user', content: 'What is the weather in London?' }],
-        stream: false,
-        tools: [GET_WEATHER_TOOL],
-        tool_choice: 'auto',
-      })
+  itTool(
+    'returns a tool call in the response (stream: false)',
+    async () => {
+      const res = await request(app)
+        .post('/v1/chat/completions')
+        .send({
+          model: modelAlias,
+          messages: [{ role: 'user', content: 'What is the weather in London?' }],
+          stream: false,
+          tools: [GET_WEATHER_TOOL],
+          tool_choice: 'auto',
+        })
 
-    expect(res.status).toBe(200)
-    expect(res.body.object).toBe('chat.completion')
-    const message = res.body.choices[0].message
-    expect(message.tool_calls).toBeDefined()
-    expect(Array.isArray(message.tool_calls)).toBe(true)
-    expect(message.tool_calls.length).toBeGreaterThan(0)
-    const call = message.tool_calls[0]
-    expect(call.type).toBe('function')
-    expect(call.function.name).toBe('get_weather')
-    const args = JSON.parse(call.function.arguments)
-    expect(typeof args.city).toBe('string')
-  }, 30000)
+      expect(res.status).toBe(200)
+      expect(res.body.object).toBe('chat.completion')
+      const message = res.body.choices[0].message
+      expect(message.tool_calls).toBeDefined()
+      expect(Array.isArray(message.tool_calls)).toBe(true)
+      expect(message.tool_calls.length).toBeGreaterThan(0)
+      const call = message.tool_calls[0]
+      expect(call.type).toBe('function')
+      expect(call.function.name).toBe('get_weather')
+      const args = JSON.parse(call.function.arguments)
+      expect(typeof args.city).toBe('string')
+    },
+    30000
+  )
 
-  itTool('streams tool call chunks (stream: true)', async () => {
-    const res = await request(app)
-      .post('/v1/chat/completions')
-      .send({
-        model: modelAlias,
-        messages: [{ role: 'user', content: 'What is the weather in London?' }],
-        stream: true,
-        tools: [GET_WEATHER_TOOL],
-        tool_choice: 'auto',
-      })
+  itTool(
+    'streams tool call chunks (stream: true)',
+    async () => {
+      const res = await request(app)
+        .post('/v1/chat/completions')
+        .send({
+          model: modelAlias,
+          messages: [{ role: 'user', content: 'What is the weather in London?' }],
+          stream: true,
+          tools: [GET_WEATHER_TOOL],
+          tool_choice: 'auto',
+        })
 
-    expect(res.status).toBe(200)
-    expect(res.headers['content-type']).toContain('text/event-stream')
+      expect(res.status).toBe(200)
+      expect(res.headers['content-type']).toContain('text/event-stream')
 
-    const lines = res.text.split('\n').filter((l) => l.startsWith('data: '))
-    expect(lines.at(-1)).toBe('data: [DONE]')
+      const lines = res.text.split('\n').filter((l) => l.startsWith('data: '))
+      expect(lines.at(-1)).toBe('data: [DONE]')
 
-    const chunks = lines
-      .filter((l) => l !== 'data: [DONE]')
-      .map((l) => {
-        try {
-          return JSON.parse(l.slice('data: '.length))
-        } catch {
-          return null
-        }
-      })
-      .filter(Boolean)
+      const chunks = lines
+        .filter((l) => l !== 'data: [DONE]')
+        .map((l) => {
+          try {
+            return JSON.parse(l.slice('data: '.length))
+          } catch {
+            return null
+          }
+        })
+        .filter(Boolean)
 
-    // Must have a chunk that starts the tool call (contains id, type, name)
-    const startChunk = chunks.find((c) => c.choices?.[0]?.delta?.tool_calls?.[0]?.id !== undefined)
-    expect(startChunk).toBeDefined()
-    expect(startChunk.choices[0].delta.tool_calls[0].type).toBe('function')
-    expect(startChunk.choices[0].delta.tool_calls[0].function.name).toBe('get_weather')
+      // Must have a chunk that starts the tool call (contains id, type, name)
+      const startChunk = chunks.find(
+        (c) => c.choices?.[0]?.delta?.tool_calls?.[0]?.id !== undefined
+      )
+      expect(startChunk).toBeDefined()
+      expect(startChunk.choices[0].delta.tool_calls[0].type).toBe('function')
+      expect(startChunk.choices[0].delta.tool_calls[0].function.name).toBe('get_weather')
 
-    // Must have at least one argument delta chunk
-    const argChunks = chunks.filter(
-      (c) =>
-        c.choices?.[0]?.delta?.tool_calls?.[0]?.function?.arguments !== undefined &&
-        c.choices[0].delta.tool_calls[0].function.arguments !== ''
-    )
-    expect(argChunks.length).toBeGreaterThan(0)
-  }, 30000)
+      // Must have at least one argument delta chunk
+      const argChunks = chunks.filter(
+        (c) =>
+          c.choices?.[0]?.delta?.tool_calls?.[0]?.function?.arguments !== undefined &&
+          c.choices[0].delta.tool_calls[0].function.arguments !== ''
+      )
+      expect(argChunks.length).toBeGreaterThan(0)
+    },
+    30000
+  )
 }
