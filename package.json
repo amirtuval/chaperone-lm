@@ -1,5 +1,5 @@
 {
-  "name": "chapernoe-lm",
+  "name": "chaperone-lm",
   "version": "1.0.0",
   "description": "LLM gateway with OpenAI-compatible API",
   "type": "module",
