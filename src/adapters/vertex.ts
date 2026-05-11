@@ -5,6 +5,7 @@ import { createVertexMaas } from '@ai-sdk/google-vertex/maas'
 import type { LanguageModelV3StreamPart } from '@ai-sdk/provider'
 import type { ChannelConfig } from '../types.js'
 import type { ProviderAdapter, GatewayRequest, AdapterRequestError } from './types.js'
+import { AnthropicAdapter } from './anthropic.js'
 
 // Vertex AI supports three distinct model backends:
 //   gemini   (default) — first-party Gemini models via createVertex
@@ -13,9 +14,19 @@ import type { ProviderAdapter, GatewayRequest, AdapterRequestError } from './typ
 //
 // The 'provider' field on the channel config selects the backend.
 // When omitted, 'gemini' is assumed.
+//
+// When provider === 'anthropic', request transformation is delegated to
+// AnthropicAdapter so that system message merging, reasoning_effort mapping,
+// and forced temperature=1 are applied correctly.
 
 export class VertexAdapter implements ProviderAdapter {
+  private readonly anthropicAdapter = new AnthropicAdapter()
+  private activeProvider: 'gemini' | 'anthropic' | 'maas' = 'gemini'
+
   transformRequest(req: GatewayRequest): GatewayRequest | AdapterRequestError {
+    if (this.activeProvider === 'anthropic') {
+      return this.anthropicAdapter.transformRequest(req)
+    }
     return req
   }
 
@@ -31,6 +42,8 @@ export class VertexAdapter implements ProviderAdapter {
     }
 
     const { project, region, provider = 'gemini' } = channelConfig
+
+    this.activeProvider = provider
 
     if (provider === 'anthropic') {
       return createVertexAnthropic({ project, location: region })(modelId)
