@@ -33,3 +33,9 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Integration tests
+        env:
+          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: npm run test:integration -- --reporter=verbose
