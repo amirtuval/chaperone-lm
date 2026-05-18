@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       provider:
-        description: 'Provider to test (google, openrouter, bedrock, vertex, all)'
+        description: 'Provider to test (google, openrouter, bedrock, vertex, azure, anthropic, openai, all)'
         required: false
         default: 'all'
         type: choice
@@ -17,6 +17,8 @@ on:
           - bedrock
           - vertex
           - azure
+          - anthropic
+          - openai
 
 permissions:
   contents: read
@@ -78,3 +80,15 @@ jobs:
           AZURE_AI_SERVICES_ENDPOINT: ${{ secrets.AZURE_AI_SERVICES_ENDPOINT }}
           AZURE_AI_SERVICES_API_KEY: ${{ secrets.AZURE_AI_SERVICES_API_KEY }}
         run: npm run test:integration -- --reporter=verbose src/adapters/__integration__/azure.integration.test.ts
+
+      - name: Run Anthropic integration tests
+        if: github.event.inputs.provider == 'anthropic' || github.event.inputs.provider == 'all' || github.event_name == 'schedule'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npm run test:integration -- --reporter=verbose src/adapters/__integration__/anthropic.integration.test.ts
+
+      - name: Run OpenAI integration tests
+        if: github.event.inputs.provider == 'openai' || github.event.inputs.provider == 'all' || github.event_name == 'schedule'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: npm run test:integration -- --reporter=verbose src/adapters/__integration__/openai.integration.test.ts
