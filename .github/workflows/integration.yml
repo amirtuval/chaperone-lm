@@ -34,10 +34,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          cache: yarn
 
       - name: Install dependencies
-        run: npm ci
+        run: yarn install --immutable
 
       - name: Authenticate to Google Cloud
         if: github.event.inputs.provider == 'vertex' || github.event.inputs.provider == 'all' || github.event_name == 'schedule'
@@ -50,13 +50,13 @@ jobs:
         if: github.event.inputs.provider == 'google' || github.event.inputs.provider == 'all' || github.event_name == 'schedule'
         env:
           GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
-        run: npm run test:integration -- --reporter=verbose src/adapters/__integration__/google.integration.test.ts
+        run: yarn test:integration --reporter=verbose src/adapters/__integration__/google.integration.test.ts
 
       - name: Run OpenRouter integration tests
         if: github.event.inputs.provider == 'openrouter' || github.event.inputs.provider == 'all' || github.event_name == 'schedule'
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: npm run test:integration -- --reporter=verbose src/adapters/__integration__/openrouter.integration.test.ts
+        run: yarn test:integration --reporter=verbose src/adapters/__integration__/openrouter.integration.test.ts
 
       - name: Run Bedrock integration tests
         if: github.event.inputs.provider == 'bedrock' || github.event.inputs.provider == 'all' || github.event_name == 'schedule'
@@ -64,13 +64,13 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: us-east-1
-        run: npm run test:integration -- --reporter=verbose src/adapters/__integration__/bedrock.integration.test.ts
+        run: yarn test:integration --reporter=verbose src/adapters/__integration__/bedrock.integration.test.ts
 
       - name: Run Vertex integration tests
         if: github.event.inputs.provider == 'vertex' || github.event.inputs.provider == 'all' || github.event_name == 'schedule'
         env:
           VERTEX_PROJECT: ${{ secrets.VERTEX_PROJECT }}
-        run: npm run test:integration -- --reporter=verbose src/adapters/__integration__/vertex.integration.test.ts
+        run: yarn test:integration --reporter=verbose src/adapters/__integration__/vertex.integration.test.ts
 
       - name: Run Azure integration tests
         if: github.event.inputs.provider == 'azure' || github.event.inputs.provider == 'all' || github.event_name == 'schedule'
@@ -79,16 +79,16 @@ jobs:
           AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
           AZURE_AI_SERVICES_ENDPOINT: ${{ secrets.AZURE_AI_SERVICES_ENDPOINT }}
           AZURE_AI_SERVICES_API_KEY: ${{ secrets.AZURE_AI_SERVICES_API_KEY }}
-        run: npm run test:integration -- --reporter=verbose src/adapters/__integration__/azure.integration.test.ts
+        run: yarn test:integration --reporter=verbose src/adapters/__integration__/azure.integration.test.ts
 
       - name: Run Anthropic integration tests
         if: github.event.inputs.provider == 'anthropic' || github.event.inputs.provider == 'all' || github.event_name == 'schedule'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: npm run test:integration -- --reporter=verbose src/adapters/__integration__/anthropic.integration.test.ts
+        run: yarn test:integration --reporter=verbose src/adapters/__integration__/anthropic.integration.test.ts
 
       - name: Run OpenAI integration tests
         if: github.event.inputs.provider == 'openai' || github.event.inputs.provider == 'all' || github.event_name == 'schedule'
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: npm run test:integration -- --reporter=verbose src/adapters/__integration__/openai.integration.test.ts
+        run: yarn test:integration --reporter=verbose src/adapters/__integration__/openai.integration.test.ts

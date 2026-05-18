@@ -108,18 +108,18 @@ models:
 ## Running the server
 
 ```bash
-npm install
+yarn install
 ```
 
 Start in development mode (hot-reload via `tsx`):
 ```bash
-CONFIG_PATH=./config.yaml npm run dev
+CONFIG_PATH=./config.yaml yarn dev
 ```
 
 Build and start in production:
 ```bash
-npm run build
-CONFIG_PATH=./config.yaml npm start
+yarn build
+CONFIG_PATH=./config.yaml yarn start
 ```
 
 The server listens on port `3000` by default. Override with `PORT`.
@@ -219,16 +219,16 @@ models:
 ## Development
 
 ```bash
-npm test                  # unit tests
-npm run test:integration  # integration tests (requires provider credentials)
-npm run lint
-npm run format:check
-npx tsc --noEmit          # type check
+yarn test                  # unit tests
+yarn test:integration      # integration tests (requires provider credentials)
+yarn lint
+yarn format:check
+yarn tsc --noEmit          # type check
 ```
 
 Integration tests skip automatically when the required environment variables are not set. To run a specific provider's tests:
 
 ```bash
 source .env
-npm run test:integration -- src/adapters/__integration__/anthropic.integration.test.ts
+yarn test:integration src/adapters/__integration__/anthropic.integration.test.ts
 ```
