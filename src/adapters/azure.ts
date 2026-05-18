@@ -48,7 +48,7 @@ export class AzureAdapter implements ProviderAdapter {
     if (channelConfig.type !== 'azure') {
       throw new Error(`AzureAdapter requires channel type 'azure', got '${channelConfig.type}'`)
     }
-    return createAzure({ resourceName: channelConfig.resourceName, apiKey: channelConfig.apiKey })(
+    return createAzure({ resourceName: channelConfig.resourceName, apiKey: channelConfig.apiKey }).chat(
       deploymentId ?? modelId
     )
   }
