@@ -1,20 +1,12 @@
 import type { LanguageModel } from 'ai'
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
-import type { LanguageModelV3StreamPart } from '@ai-sdk/provider'
 import type { ChannelConfig } from '../types.js'
-import type { ProviderAdapter, AdapterRequestError, GatewayRequest } from './types.js'
+import type { AdapterRequestError, GatewayRequest } from './types.js'
+import { AISdkAdapter } from './aisdk-base.js'
 
-export class BedrockAdapter implements ProviderAdapter {
+export class BedrockAdapter extends AISdkAdapter {
   transformRequest(req: GatewayRequest): GatewayRequest | AdapterRequestError {
     return req
-  }
-
-  async *transformResponse(
-    stream: AsyncIterable<LanguageModelV3StreamPart>
-  ): AsyncIterable<LanguageModelV3StreamPart> {
-    for await (const part of stream) {
-      yield part
-    }
   }
 
   createModel(

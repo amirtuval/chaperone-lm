@@ -1,7 +1,5 @@
-import type { Response } from 'express'
+import type { Request, Response } from 'express'
 import type { ChatCompletionCreateParams } from 'openai/resources/chat/completions'
-import type { LanguageModelV3StreamPart } from '@ai-sdk/provider'
-import type { LanguageModel } from 'ai'
 import type { ChannelConfig } from '../types.js'
 
 // Extends the standard OpenAI type with gateway-specific fields that adapters
@@ -16,10 +14,12 @@ export interface AdapterRequestError {
   writeError(res: Response): void
 }
 
+export interface RouteContext {
+  channelConfig: ChannelConfig
+  upstreamModelId: string
+  deploymentId?: string
+}
+
 export interface ProviderAdapter {
-  transformRequest(req: GatewayRequest): GatewayRequest | AdapterRequestError
-  transformResponse(
-    stream: AsyncIterable<LanguageModelV3StreamPart>
-  ): AsyncIterable<LanguageModelV3StreamPart>
-  createModel(channelConfig: ChannelConfig, modelId: string, deploymentId?: string): LanguageModel
+  handleRequest(req: Request, res: Response, ctx: RouteContext): Promise<void>
 }

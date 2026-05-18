@@ -1,24 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import request from 'supertest'
-import { MockLanguageModelV3, convertArrayToReadableStream } from 'ai/test'
 import { createApp } from '../server.js'
 import type { AppConfig } from '../types.js'
-import type { ProviderAdapter, GatewayRequest } from '../adapters/types.js'
-import type { LanguageModel } from 'ai'
+import type { ProviderAdapter } from '../adapters/types.js'
 
 function makeAdapter(): ProviderAdapter {
-  return {
-    transformRequest: (req: GatewayRequest) => req,
-    transformResponse: async function* (stream) {
-      yield* stream
-    },
-    createModel: (): LanguageModel =>
-      new MockLanguageModelV3({
-        doStream: async () => ({
-          stream: convertArrayToReadableStream([]),
-        }),
-      }),
-  }
+  return { handleRequest: async () => {} }
 }
 
 const config: AppConfig = {
