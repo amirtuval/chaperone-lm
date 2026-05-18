@@ -1,9 +1,9 @@
 import type { LanguageModel } from 'ai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createVertex } from '@ai-sdk/google-vertex'
-import type { LanguageModelV3StreamPart } from '@ai-sdk/provider'
 import type { ChannelConfig } from '../types.js'
-import type { ProviderAdapter, AdapterRequestError, GatewayRequest } from './types.js'
+import type { AdapterRequestError, GatewayRequest } from './types.js'
+import { AISdkAdapter } from './aisdk-base.js'
 
 const DEFAULT_SAFETY_SETTINGS = [
   { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
@@ -12,7 +12,7 @@ const DEFAULT_SAFETY_SETTINGS = [
   { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
 ]
 
-export class GoogleAdapter implements ProviderAdapter {
+export class GoogleAdapter extends AISdkAdapter {
   transformRequest(req: GatewayRequest): GatewayRequest | AdapterRequestError {
     const transformed = { ...req }
 
@@ -54,14 +54,6 @@ export class GoogleAdapter implements ProviderAdapter {
     }
 
     return transformed
-  }
-
-  async *transformResponse(
-    stream: AsyncIterable<LanguageModelV3StreamPart>
-  ): AsyncIterable<LanguageModelV3StreamPart> {
-    for await (const part of stream) {
-      yield part
-    }
   }
 
   createModel(

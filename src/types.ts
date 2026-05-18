@@ -1,4 +1,4 @@
-import type { ProviderAdapter } from './adapters/types.js'
+import type { ProviderAdapter, RouteContext } from './adapters/types.js'
 
 export type ChannelType =
   | 'anthropic'
@@ -36,9 +36,6 @@ export interface AppConfig {
   models: Record<string, ModelConfig>
 }
 
-export interface ResolvedRoute {
-  channelConfig: ChannelConfig
-  upstreamModelId: string
-  deploymentId?: string
+export interface ResolvedRoute extends RouteContext {
   adapter: ProviderAdapter
 }

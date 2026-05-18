@@ -2,9 +2,9 @@ import type { LanguageModel } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
 import { createVertex } from '@ai-sdk/google-vertex'
-import type { LanguageModelV3StreamPart } from '@ai-sdk/provider'
 import type { ChannelConfig } from '../types.js'
-import type { ProviderAdapter, AdapterRequestError, GatewayRequest } from './types.js'
+import type { AdapterRequestError, GatewayRequest } from './types.js'
+import { AISdkAdapter } from './aisdk-base.js'
 import { httpError } from './errors.js'
 
 const REASONING_EFFORT_BUDGET: Record<string, number> = {
@@ -13,7 +13,7 @@ const REASONING_EFFORT_BUDGET: Record<string, number> = {
   high: 16000,
 }
 
-export class AnthropicAdapter implements ProviderAdapter {
+export class AnthropicAdapter extends AISdkAdapter {
   transformRequest(req: GatewayRequest): GatewayRequest | AdapterRequestError {
     const transformed = { ...req }
 
@@ -51,14 +51,6 @@ export class AnthropicAdapter implements ProviderAdapter {
     }
 
     return transformed
-  }
-
-  async *transformResponse(
-    stream: AsyncIterable<LanguageModelV3StreamPart>
-  ): AsyncIterable<LanguageModelV3StreamPart> {
-    for await (const part of stream) {
-      yield part
-    }
   }
 
   createModel(
