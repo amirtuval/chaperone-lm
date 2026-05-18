@@ -16,6 +16,7 @@ on:
           - openrouter
           - bedrock
           - vertex
+          - azure
 
 permissions:
   contents: read
@@ -68,3 +69,12 @@ jobs:
         env:
           VERTEX_PROJECT: ${{ secrets.VERTEX_PROJECT }}
         run: npm run test:integration -- --reporter=verbose src/adapters/__integration__/vertex.integration.test.ts
+
+      - name: Run Azure integration tests
+        if: github.event.inputs.provider == 'azure' || github.event.inputs.provider == 'all' || github.event_name == 'schedule'
+        env:
+          AZURE_OPENAI_RESOURCE_NAME: ${{ secrets.AZURE_OPENAI_RESOURCE_NAME }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_AI_SERVICES_ENDPOINT: ${{ secrets.AZURE_AI_SERVICES_ENDPOINT }}
+          AZURE_AI_SERVICES_API_KEY: ${{ secrets.AZURE_AI_SERVICES_API_KEY }}
+        run: npm run test:integration -- --reporter=verbose src/adapters/__integration__/azure.integration.test.ts

@@ -52,4 +52,8 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: us-east-1
           VERTEX_PROJECT: ${{ secrets.VERTEX_PROJECT }}
+          AZURE_OPENAI_RESOURCE_NAME: ${{ secrets.AZURE_OPENAI_RESOURCE_NAME }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_AI_SERVICES_ENDPOINT: ${{ secrets.AZURE_AI_SERVICES_ENDPOINT }}
+          AZURE_AI_SERVICES_API_KEY: ${{ secrets.AZURE_AI_SERVICES_API_KEY }}
         run: npm run test:integration -- --reporter=verbose
