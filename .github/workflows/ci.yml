@@ -21,22 +21,29 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+
+      - name: Enable Corepack (Yarn 4)
+        run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
 
       - name: Install dependencies
-        run: npm ci
+        run: yarn install --immutable
 
       - name: Type check
-        run: npx tsc --noEmit
+        run: yarn tsc --noEmit
 
       - name: Lint
-        run: npm run lint
+        run: yarn lint
 
       - name: Format check
-        run: npm run format:check
+        run: yarn format:check
 
       - name: Test
-        run: npm test
+        run: yarn test
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -55,4 +62,4 @@ jobs:
           VERTEX_PROJECT: ${{ secrets.VERTEX_PROJECT }}
         # Azure uses a low-quota Foundry serverless endpoint — run it only via
         # the dedicated integration.yml workflow to avoid rate-limit collisions.
-        run: npm run test:integration -- --reporter=verbose --exclude 'src/adapters/__integration__/azure.integration.test.ts'
+        run: yarn test:integration --reporter=verbose --exclude 'src/adapters/__integration__/azure.integration.test.ts'
