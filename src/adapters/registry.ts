@@ -10,16 +10,25 @@ import { OpenAICompatibleAdapter } from './openai-compatible.js'
 
 type AdapterConstructor = new () => ProviderAdapter
 
-const ADAPTER_MAP: Record<ChannelType, AdapterConstructor> = {
+const ADAPTER_MAP: Partial<Record<ChannelType, AdapterConstructor>> = {
   anthropic: AnthropicAdapter,
   openai: OpenAIAdapter,
   google: GoogleAdapter,
   bedrock: BedrockAdapter,
-  vertex: VertexAdapter,
   azure: AzureAdapter,
   'openai-compatible': OpenAICompatibleAdapter,
 }
 
+function buildAdapter(ch: ChannelConfig): ProviderAdapter {
+  // VertexAdapter requires the provider at construction time so that
+  // transformRequest is correct before createModel is ever called.
+  if (ch.type === 'vertex') {
+    return new VertexAdapter(ch.provider ?? 'gemini')
+  }
+  const Ctor = ADAPTER_MAP[ch.type]!
+  return new Ctor()
+}
+
 export function buildAdapterRegistry(channels: ChannelConfig[]): Map<string, ProviderAdapter> {
-  return new Map(channels.map((ch) => [ch.name, new ADAPTER_MAP[ch.type]()] as const))
+  return new Map(channels.map((ch) => [ch.name, buildAdapter(ch)] as const))
 }

@@ -39,12 +39,28 @@ describe('VertexAdapter.transformRequest', () => {
 })
 
 describe('VertexAdapter.transformRequest — provider: anthropic', () => {
-  // Each test creates its own adapter so createModel sets the provider context
-  // before transformRequest is exercised.
+  it('applies anthropic transforms without calling createModel first (regression: mutable activeProvider)', () => {
+    // transformRequest must behave correctly from the very first call.
+    // Previously, activeProvider was set as a side-effect of createModel, which
+    // runs *after* transformRequest in the request pipeline — so the first
+    // request to an anthropic Vertex channel silently skipped transforms.
+    const a = new VertexAdapter('anthropic')
+    const req = makeReq({
+      messages: [
+        { role: 'system', content: 'Be helpful.' },
+        { role: 'system', content: 'Be concise.' },
+        { role: 'user', content: 'Hi' },
+      ],
+    })
+    const result = a.transformRequest(req) as GatewayRequest
+    expect(result).not.toHaveProperty('writeError')
+    const systemMessages = result.messages.filter((m) => m.role === 'system')
+    expect(systemMessages).toHaveLength(1)
+    expect(systemMessages[0].content).toBe('Be helpful.\n\nBe concise.')
+  })
 
   it('merges multiple system messages into one', () => {
-    const a = new VertexAdapter()
-    a.createModel(baseChannel('anthropic'), 'claude-sonnet-4-5@20250929')
+    const a = new VertexAdapter('anthropic')
     const req = makeReq({
       messages: [
         { role: 'system', content: 'Be helpful.' },
@@ -60,8 +76,7 @@ describe('VertexAdapter.transformRequest — provider: anthropic', () => {
   })
 
   it('maps reasoning_effort low → budgetTokens 2000 and forces temperature 1', () => {
-    const a = new VertexAdapter()
-    a.createModel(baseChannel('anthropic'), 'claude-sonnet-4-5@20250929')
+    const a = new VertexAdapter('anthropic')
     const req = makeReq({ reasoning_effort: 'low' })
     const result = a.transformRequest(req) as GatewayRequest
     expect(result).not.toHaveProperty('writeError')
@@ -73,8 +88,7 @@ describe('VertexAdapter.transformRequest — provider: anthropic', () => {
   })
 
   it('returns AdapterRequestError for unknown reasoning_effort value', () => {
-    const a = new VertexAdapter()
-    a.createModel(baseChannel('anthropic'), 'claude-sonnet-4-5@20250929')
+    const a = new VertexAdapter('anthropic')
     const req = makeReq({ reasoning_effort: 'ultra' as GatewayRequest['reasoning_effort'] })
     const result = a.transformRequest(req)
     expect(result).toHaveProperty('writeError')
@@ -86,8 +100,7 @@ describe('VertexAdapter.transformRequest — provider: anthropic', () => {
 
 describe('VertexAdapter.transformRequest — non-anthropic providers', () => {
   it('passes through unchanged when provider is gemini (explicit)', () => {
-    const a = new VertexAdapter()
-    a.createModel(baseChannel('gemini'), 'gemini-2.0-flash')
+    const a = new VertexAdapter('gemini')
     const req = makeReq()
     const result = a.transformRequest(req)
     expect(result).not.toHaveProperty('writeError')
@@ -96,7 +109,6 @@ describe('VertexAdapter.transformRequest — non-anthropic providers', () => {
 
   it('passes through unchanged when provider is omitted (defaults to gemini)', () => {
     const a = new VertexAdapter()
-    a.createModel(baseChannel(), 'gemini-2.0-flash')
     const req = makeReq()
     const result = a.transformRequest(req)
     expect(result).not.toHaveProperty('writeError')
@@ -104,8 +116,7 @@ describe('VertexAdapter.transformRequest — non-anthropic providers', () => {
   })
 
   it('passes through unchanged when provider is maas', () => {
-    const a = new VertexAdapter()
-    a.createModel(baseChannel('maas'), 'meta/llama-4-maverick-17b-128e-instruct-maas')
+    const a = new VertexAdapter('maas')
     const req = makeReq()
     const result = a.transformRequest(req)
     expect(result).not.toHaveProperty('writeError')
