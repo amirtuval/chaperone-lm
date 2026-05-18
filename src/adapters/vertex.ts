@@ -18,13 +18,21 @@ import { AnthropicAdapter } from './anthropic.js'
 // When provider === 'anthropic', request transformation is delegated to
 // AnthropicAdapter so that system message merging, reasoning_effort mapping,
 // and forced temperature=1 are applied correctly.
+//
+// The provider is injected at construction time (one adapter instance per
+// channel in the registry) so that transformRequest is correct from the very
+// first call — independently of whether createModel has run yet.
 
 export class VertexAdapter implements ProviderAdapter {
   private readonly anthropicAdapter = new AnthropicAdapter()
-  private activeProvider: 'gemini' | 'anthropic' | 'maas' = 'gemini'
+  private readonly provider: 'gemini' | 'anthropic' | 'maas'
+
+  constructor(provider: 'gemini' | 'anthropic' | 'maas' = 'gemini') {
+    this.provider = provider
+  }
 
   transformRequest(req: GatewayRequest): GatewayRequest | AdapterRequestError {
-    if (this.activeProvider === 'anthropic') {
+    if (this.provider === 'anthropic') {
       return this.anthropicAdapter.transformRequest(req)
     }
     return req
@@ -42,8 +50,6 @@ export class VertexAdapter implements ProviderAdapter {
     }
 
     const { project, region, provider = 'gemini' } = channelConfig
-
-    this.activeProvider = provider
 
     if (provider === 'anthropic') {
       return createVertexAnthropic({ project, location: region })(modelId)

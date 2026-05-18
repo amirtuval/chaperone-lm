@@ -19,6 +19,11 @@ const AOAI_KEY = process.env.AZURE_OPENAI_API_KEY
 const FOUNDRY_ENDPOINT = process.env.AZURE_AI_SERVICES_ENDPOINT
 const FOUNDRY_KEY = process.env.AZURE_AI_SERVICES_API_KEY
 
+// Deployment names as configured in the Azure portal (chaperone-lm-aoai-314d8).
+// Override via env vars if the deployment names ever change.
+const GPT4O_DEPLOYMENT = process.env.AZURE_OPENAI_GPT4O_DEPLOYMENT ?? 'gpt-4o'
+const GPT54_DEPLOYMENT = process.env.AZURE_OPENAI_GPT54_DEPLOYMENT ?? 'gpt-5-4'
+
 const hasAoaiCredentials = Boolean(RESOURCE_NAME && AOAI_KEY)
 const hasFoundryCredentials = Boolean(FOUNDRY_ENDPOINT && FOUNDRY_KEY)
 
@@ -35,7 +40,10 @@ function makeAoaiApp(channelName: string, modelAlias: string, deploymentId: stri
 function makeFoundryApp(channelName: string, modelAlias: string, modelId: string) {
   // Azure AI Foundry serverless models expose an OpenAI-compatible endpoint at
   // {endpoint}/models — the SDK appends /chat/completions automatically.
-  const baseUrl = FOUNDRY_ENDPOINT!.replace(/\/$/, '') + '/models'
+  if (!FOUNDRY_ENDPOINT) {
+    throw new Error('AZURE_AI_SERVICES_ENDPOINT is required for Foundry tests')
+  }
+  const baseUrl = FOUNDRY_ENDPOINT.replace(/\/$/, '') + '/models'
   const config: AppConfig = {
     channels: [{ name: channelName, type: 'openai-compatible', baseUrl, apiKey: FOUNDRY_KEY }],
     models: { [modelAlias]: { channel: channelName, model: modelId } },
@@ -45,7 +53,7 @@ function makeFoundryApp(channelName: string, modelAlias: string, modelId: string
 
 describe.skipIf(!hasAoaiCredentials)('Azure OpenAI — gpt-4o — integration', () => {
   runProviderSuite({
-    app: makeAoaiApp('azure-gpt4o', 'gpt-4o', 'gpt-4o'),
+    app: makeAoaiApp('azure-gpt4o', 'gpt-4o', GPT4O_DEPLOYMENT),
     modelAlias: 'gpt-4o',
     strictFinishReason: true,
   })
@@ -53,7 +61,7 @@ describe.skipIf(!hasAoaiCredentials)('Azure OpenAI — gpt-4o — integration', 
 
 describe.skipIf(!hasAoaiCredentials)('Azure OpenAI — gpt-5.4 — integration', () => {
   runProviderSuite({
-    app: makeAoaiApp('azure-gpt54', 'gpt-5-4', 'gpt-5-4'),
+    app: makeAoaiApp('azure-gpt54', 'gpt-5-4', GPT54_DEPLOYMENT),
     modelAlias: 'gpt-5-4',
     strictFinishReason: true,
   })

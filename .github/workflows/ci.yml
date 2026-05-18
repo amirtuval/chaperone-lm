@@ -47,15 +47,11 @@ jobs:
       - name: Integration tests
         env:
           GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: us-east-1
           VERTEX_PROJECT: ${{ secrets.VERTEX_PROJECT }}
-          AZURE_OPENAI_RESOURCE_NAME: ${{ secrets.AZURE_OPENAI_RESOURCE_NAME }}
-          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
-          AZURE_AI_SERVICES_ENDPOINT: ${{ secrets.AZURE_AI_SERVICES_ENDPOINT }}
-          AZURE_AI_SERVICES_API_KEY: ${{ secrets.AZURE_AI_SERVICES_API_KEY }}
         # Azure uses a low-quota Foundry serverless endpoint — run it only via
         # the dedicated integration.yml workflow to avoid rate-limit collisions.
         run: npm run test:integration -- --reporter=verbose --exclude 'src/adapters/__integration__/azure.integration.test.ts'

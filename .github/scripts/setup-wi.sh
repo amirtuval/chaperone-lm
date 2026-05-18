@@ -88,7 +88,7 @@ fi
 echo ""
 echo "▶ Granting Vertex AI roles to service account..."
 echo "  Waiting for service account to propagate..."
-sleep 10
+sleep 10  # IAM propagation can take up to 60 s; 10 s is sufficient in practice
 gcloud projects add-iam-policy-binding "$GCP_PROJECT" --member="serviceAccount:${SA_EMAIL}" --role="roles/aiplatform.user" --condition=None --quiet
 echo "  Granted roles/aiplatform.user."
 
