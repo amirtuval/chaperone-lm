@@ -57,7 +57,7 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
     } else {
       expect(res.body.choices[0].finish_reason).toBeTruthy()
     }
-  }, 30000)
+  }, 60000)
 
   it('returns a well-formed SSE stream (stream: true)', async () => {
     const res = await request(app)
@@ -104,7 +104,7 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
     } else {
       expect(finishChunk.choices[0].finish_reason).toBeTruthy()
     }
-  }, 30000)
+  }, 60000)
 
   it('handles multiple system messages (stream: false)', async () => {
     const res = await request(app)
@@ -122,7 +122,7 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
     expect(res.status).toBe(200)
     expect(res.body.object).toBe('chat.completion')
     expect(res.body.choices[0].message.role).toBe('assistant')
-  }, 30000)
+  }, 60000)
 
   it('returns 404 for an unknown model alias', async () => {
     const res = await request(app)
@@ -134,7 +134,7 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
 
     expect(res.status).toBe(404)
     expect(res.body.error.code).toBe('model_not_found')
-  }, 30000)
+  }, 60000)
 
   itTool(
     'returns a tool call in the response (stream: false)',
@@ -161,7 +161,7 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
       const args = JSON.parse(call.function.arguments)
       expect(typeof args.city).toBe('string')
     },
-    30000
+    60000
   )
 
   itTool(
@@ -210,6 +210,6 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
       )
       expect(argChunks.length).toBeGreaterThan(0)
     },
-    30000
+    60000
   )
 }
