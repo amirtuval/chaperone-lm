@@ -56,4 +56,6 @@ jobs:
           AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
           AZURE_AI_SERVICES_ENDPOINT: ${{ secrets.AZURE_AI_SERVICES_ENDPOINT }}
           AZURE_AI_SERVICES_API_KEY: ${{ secrets.AZURE_AI_SERVICES_API_KEY }}
-        run: npm run test:integration -- --reporter=verbose
+        # Azure uses a low-quota Foundry serverless endpoint — run it only via
+        # the dedicated integration.yml workflow to avoid rate-limit collisions.
+        run: npm run test:integration -- --reporter=verbose --exclude 'src/adapters/__integration__/azure.integration.test.ts'
