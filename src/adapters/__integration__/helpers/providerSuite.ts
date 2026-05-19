@@ -40,8 +40,13 @@ const GET_WEATHER_TOOL = {
 }
 
 export function runProviderSuite(options: ProviderSuiteOptions): void {
-  const { app, modelAlias, strictFinishReason = true, supportsTools = true, rateLimitDelayMs } =
-    options
+  const {
+    app,
+    modelAlias,
+    strictFinishReason = true,
+    supportsTools = true,
+    rateLimitDelayMs,
+  } = options
   const itTool = supportsTools ? it : it.skip
 
   it('returns a non-streaming response (stream: false)', async () => {
@@ -123,24 +128,28 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
     }
   }, 60000)
 
-  it('handles multiple system messages (stream: false)', async () => {
-    if (rateLimitDelayMs) await new Promise((resolve) => setTimeout(resolve, rateLimitDelayMs))
-    const res = await request(app)
-      .post('/v1/chat/completions')
-      .send({
-        model: modelAlias,
-        messages: [
-          { role: 'system', content: 'You are a helpful assistant.' },
-          { role: 'system', content: 'Always respond concisely.' },
-          { role: 'user', content: 'Say exactly the word: hello' },
-        ],
-        stream: false,
-      })
+  it(
+    'handles multiple system messages (stream: false)',
+    async () => {
+      if (rateLimitDelayMs) await new Promise((resolve) => setTimeout(resolve, rateLimitDelayMs))
+      const res = await request(app)
+        .post('/v1/chat/completions')
+        .send({
+          model: modelAlias,
+          messages: [
+            { role: 'system', content: 'You are a helpful assistant.' },
+            { role: 'system', content: 'Always respond concisely.' },
+            { role: 'user', content: 'Say exactly the word: hello' },
+          ],
+          stream: false,
+        })
 
-    expect(res.status).toBe(200)
-    expect(res.body.object).toBe('chat.completion')
-    expect(res.body.choices[0].message.role).toBe('assistant')
-  }, 60000 + (options.rateLimitDelayMs ?? 0))
+      expect(res.status).toBe(200)
+      expect(res.body.object).toBe('chat.completion')
+      expect(res.body.choices[0].message.role).toBe('assistant')
+    },
+    60000 + (options.rateLimitDelayMs ?? 0)
+  )
 
   it('returns 404 for an unknown model alias', async () => {
     const res = await request(app)
