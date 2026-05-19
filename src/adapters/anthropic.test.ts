@@ -96,18 +96,3 @@ describe('AnthropicAdapter.transformRequest', () => {
     expect(res.status).toHaveBeenCalledWith(400)
   })
 })
-
-describe('AnthropicAdapter.transformResponse', () => {
-  it('passes stream parts through unchanged', async () => {
-    async function* source() {
-      yield { type: 'text-delta' as const, id: '1', delta: 'hello' }
-      yield { type: 'text-delta' as const, id: '2', delta: ' world' }
-    }
-    const parts = []
-    for await (const p of adapter.transformResponse(source())) {
-      parts.push(p)
-    }
-    expect(parts).toHaveLength(2)
-    expect(parts[0]).toMatchObject({ delta: 'hello' })
-  })
-})

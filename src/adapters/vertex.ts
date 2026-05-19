@@ -2,9 +2,9 @@ import type { LanguageModel } from 'ai'
 import { createVertex } from '@ai-sdk/google-vertex'
 import { createVertexAnthropic } from '@ai-sdk/google-vertex/anthropic'
 import { createVertexMaas } from '@ai-sdk/google-vertex/maas'
-import type { LanguageModelV3StreamPart } from '@ai-sdk/provider'
 import type { ChannelConfig } from '../types.js'
-import type { ProviderAdapter, GatewayRequest, AdapterRequestError } from './types.js'
+import type { AdapterRequestError, GatewayRequest } from './types.js'
+import { AISdkAdapter } from './aisdk-base.js'
 import { AnthropicAdapter } from './anthropic.js'
 
 // Vertex AI supports three distinct model backends:
@@ -23,11 +23,12 @@ import { AnthropicAdapter } from './anthropic.js'
 // channel in the registry) so that transformRequest is correct from the very
 // first call — independently of whether createModel has run yet.
 
-export class VertexAdapter implements ProviderAdapter {
+export class VertexAdapter extends AISdkAdapter {
   private readonly anthropicAdapter = new AnthropicAdapter()
   private readonly provider: 'gemini' | 'anthropic' | 'maas'
 
   constructor(provider: 'gemini' | 'anthropic' | 'maas' = 'gemini') {
+    super()
     this.provider = provider
   }
 
@@ -36,12 +37,6 @@ export class VertexAdapter implements ProviderAdapter {
       return this.anthropicAdapter.transformRequest(req)
     }
     return req
-  }
-
-  async *transformResponse(
-    stream: AsyncIterable<LanguageModelV3StreamPart>
-  ): AsyncIterable<LanguageModelV3StreamPart> {
-    yield* stream
   }
 
   createModel(channelConfig: ChannelConfig, modelId: string): LanguageModel {

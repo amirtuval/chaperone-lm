@@ -1,10 +1,10 @@
 import type { LanguageModel } from 'ai'
 import { createAzure } from '@ai-sdk/azure'
-import type { LanguageModelV3StreamPart } from '@ai-sdk/provider'
 import type { ChannelConfig } from '../types.js'
-import type { ProviderAdapter, AdapterRequestError, GatewayRequest } from './types.js'
+import type { AdapterRequestError, GatewayRequest } from './types.js'
+import { AISdkAdapter } from './aisdk-base.js'
 
-export class AzureAdapter implements ProviderAdapter {
+export class AzureAdapter extends AISdkAdapter {
   transformRequest(req: GatewayRequest): GatewayRequest | AdapterRequestError {
     const transformed = { ...req }
 
@@ -34,14 +34,6 @@ export class AzureAdapter implements ProviderAdapter {
     }
 
     return transformed
-  }
-
-  async *transformResponse(
-    stream: AsyncIterable<LanguageModelV3StreamPart>
-  ): AsyncIterable<LanguageModelV3StreamPart> {
-    for await (const part of stream) {
-      yield part
-    }
   }
 
   createModel(channelConfig: ChannelConfig, modelId: string, deploymentId?: string): LanguageModel {

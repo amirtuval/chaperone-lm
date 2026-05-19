@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import request from 'supertest'
 import { MockLanguageModelV3, convertArrayToReadableStream } from 'ai/test'
+import type { LanguageModel } from 'ai'
 import { createApp } from '../server.js'
 import type { AppConfig, ChannelConfig } from '../types.js'
-import type { ProviderAdapter, GatewayRequest } from '../adapters/types.js'
-import type { LanguageModel } from 'ai'
+import type { GatewayRequest, AdapterRequestError } from '../adapters/types.js'
+import { AISdkAdapter } from '../adapters/aisdk-base.js'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function makeModel(parts: any[]): LanguageModel {
@@ -16,6 +17,32 @@ function makeModel(parts: any[]): LanguageModel {
   })
 }
 
+class MockAdapter extends AISdkAdapter {
+  constructor(private readonly model: LanguageModel) {
+    super()
+  }
+  transformRequest(req: GatewayRequest): GatewayRequest | AdapterRequestError {
+    return req
+  }
+  createModel(_channelConfig: unknown, _modelId: string): LanguageModel {
+    return this.model
+  }
+}
+
+class RejectingAdapter extends AISdkAdapter {
+  transformRequest(_req: GatewayRequest): GatewayRequest | AdapterRequestError {
+    return {
+      writeError: (res) =>
+        res
+          .status(422)
+          .json({ error: { message: 'Rejected by adapter', type: 'invalid_request_error' } }),
+    }
+  }
+  createModel(): LanguageModel {
+    return makeModel([])
+  }
+}
+
 const channel: ChannelConfig = { name: 'test-channel', type: 'openai', apiKey: 'test' }
 
 const config: AppConfig = {
@@ -25,33 +52,12 @@ const config: AppConfig = {
   },
 }
 
-function makeAdapter(model: LanguageModel): ProviderAdapter {
-  return {
-    transformRequest: (req: GatewayRequest) => req,
-    transformResponse: async function* (stream) {
-      yield* stream
-    },
-    createModel: () => model,
-  }
-}
-
-function makeApp(model: LanguageModel) {
-  const adapter = makeAdapter(model)
-  const registry = new Map<string, ProviderAdapter>([['test-channel', adapter]])
-  return createApp(config, registry)
-}
-
 describe('POST /v1/chat/completions', () => {
   it('returns 404 for an unknown model', async () => {
-    const app = makeApp(
-      makeModel([
-        {
-          type: 'finish',
-          finishReason: { unified: 'stop', provider: 'stop' },
-          usage: { inputTokens: { total: 1 }, outputTokens: { total: 1 } },
-        },
-      ])
-    )
+    const adapter = new MockAdapter(makeModel([]))
+    const registry = new Map([['test-channel', adapter]])
+    const app = createApp(config, registry)
+
     const res = await request(app)
       .post('/v1/chat/completions')
       .send({ model: 'nonexistent', messages: [{ role: 'user', content: 'hi' }] })
@@ -60,7 +66,7 @@ describe('POST /v1/chat/completions', () => {
   })
 
   it('returns a non-streaming chat.completion for stream: false', async () => {
-    const app = makeApp(
+    const adapter = new MockAdapter(
       makeModel([
         { type: 'text-delta', id: '1', delta: 'Hello!' },
         {
@@ -70,6 +76,9 @@ describe('POST /v1/chat/completions', () => {
         },
       ])
     )
+    const registry = new Map([['test-channel', adapter]])
+    const app = createApp(config, registry)
+
     const res = await request(app)
       .post('/v1/chat/completions')
       .send({ model: 'test-model', messages: [{ role: 'user', content: 'hi' }], stream: false })
@@ -79,7 +88,7 @@ describe('POST /v1/chat/completions', () => {
   })
 
   it('returns SSE chunks for stream: true', async () => {
-    const app = makeApp(
+    const adapter = new MockAdapter(
       makeModel([
         { type: 'text-delta', id: '1', delta: 'Streaming!' },
         {
@@ -89,6 +98,9 @@ describe('POST /v1/chat/completions', () => {
         },
       ])
     )
+    const registry = new Map([['test-channel', adapter]])
+    const app = createApp(config, registry)
+
     const res = await request(app)
       .post('/v1/chat/completions')
       .send({ model: 'test-model', messages: [{ role: 'user', content: 'hi' }], stream: true })
@@ -99,19 +111,8 @@ describe('POST /v1/chat/completions', () => {
   })
 
   it('returns the adapter error when transformRequest rejects', async () => {
-    const rejectingAdapter: ProviderAdapter = {
-      transformRequest: (_req: GatewayRequest) => ({
-        writeError: (res) =>
-          res
-            .status(422)
-            .json({ error: { message: 'Rejected by adapter', type: 'invalid_request_error' } }),
-      }),
-      transformResponse: async function* (stream) {
-        yield* stream
-      },
-      createModel: () => makeModel([]),
-    }
-    const registry = new Map<string, ProviderAdapter>([['test-channel', rejectingAdapter]])
+    const adapter = new RejectingAdapter()
+    const registry = new Map([['test-channel', adapter]])
     const app = createApp(config, registry)
 
     const res = await request(app)
