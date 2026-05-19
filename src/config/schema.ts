@@ -39,11 +39,12 @@ const azureChannelSchema = z.object({
   apiKey: z.string(),
 })
 
-const openaiCompatibleChannelSchema = z.object({
+const llmServerChannelSchema = z.object({
   name: z.string(),
-  type: z.literal('openai-compatible'),
+  type: z.literal('llm-server'),
   baseUrl: z.string(),
   apiKey: z.string().optional(),
+  protocols: z.array(z.enum(['openai', 'anthropic'])).default(['openai']),
 })
 
 export const channelSchema = z.discriminatedUnion('type', [
@@ -53,7 +54,7 @@ export const channelSchema = z.discriminatedUnion('type', [
   bedrockChannelSchema,
   vertexChannelSchema,
   azureChannelSchema,
-  openaiCompatibleChannelSchema,
+  llmServerChannelSchema,
 ])
 
 export const modelConfigSchema = z.object({

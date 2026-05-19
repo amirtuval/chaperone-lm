@@ -1,6 +1,6 @@
 import { describe } from 'vitest'
 import { createApp } from '../../server.js'
-import { buildAdapterRegistry } from '../registry.js'
+import { buildCompletionsRegistry } from '../registry.js'
 import type { AppConfig } from '../../types.js'
 import { runProviderSuite } from './helpers/providerSuite.js'
 
@@ -16,7 +16,7 @@ function makeApp(modelAlias: string, modelId: string) {
     channels: [{ name: 'anthropic-test', type: 'anthropic', apiKey: ANTHROPIC_API_KEY! }],
     models: { [modelAlias]: { channel: 'anthropic-test', model: modelId } },
   }
-  return createApp(config, buildAdapterRegistry(config.channels))
+  return createApp(config, buildCompletionsRegistry(config))
 }
 
 describe.skipIf(!hasCredentials)('Anthropic — Claude Haiku 4 — integration', () => {

@@ -1,6 +1,6 @@
 import { describe } from 'vitest'
 import { createApp } from '../../server.js'
-import { buildAdapterRegistry } from '../registry.js'
+import { buildCompletionsRegistry } from '../registry.js'
 import type { AppConfig } from '../../types.js'
 import { runProviderSuite } from './helpers/providerSuite.js'
 
@@ -25,7 +25,7 @@ function makeApp(
     channels: [{ name: channelName, type: 'vertex', project: PROJECT!, region, provider }],
     models: { [modelAlias]: { channel: channelName, model: modelId } },
   }
-  return createApp(config, buildAdapterRegistry(config.channels))
+  return createApp(config, buildCompletionsRegistry(config))
 }
 
 describe.skipIf(!hasCredentials)('Vertex — Gemini 2.5 Flash — integration', () => {

@@ -1,4 +1,4 @@
-import type { ProviderAdapter, RouteContext } from './adapters/types.js'
+import type { CompletionsProviderAdapter, RouteContext } from './adapters/types.js'
 
 export type ChannelType =
   | 'anthropic'
@@ -7,7 +7,7 @@ export type ChannelType =
   | 'bedrock'
   | 'vertex'
   | 'azure'
-  | 'openai-compatible'
+  | 'llm-server'
 
 // Discriminated union — one variant per ChannelType
 export type ChannelConfig =
@@ -23,7 +23,13 @@ export type ChannelConfig =
       provider?: 'gemini' | 'anthropic' | 'maas'
     }
   | { name: string; type: 'azure'; resourceName: string; apiKey: string }
-  | { name: string; type: 'openai-compatible'; baseUrl: string; apiKey?: string }
+  | {
+      name: string
+      type: 'llm-server'
+      baseUrl: string
+      apiKey?: string
+      protocols: Array<'openai' | 'anthropic'>
+    }
 
 export interface ModelConfig {
   channel: string
@@ -37,5 +43,5 @@ export interface AppConfig {
 }
 
 export interface ResolvedRoute extends RouteContext {
-  adapter: ProviderAdapter
+  adapter: CompletionsProviderAdapter
 }

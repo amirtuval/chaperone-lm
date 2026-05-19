@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { resolveRoute } from './resolver.js'
 import type { AppConfig } from '../types.js'
-import type { ProviderAdapter } from '../adapters/types.js'
+import type { CompletionsProviderAdapter } from '../adapters/types.js'
 
-const fakeAdapter = {} as ProviderAdapter
+const fakeAdapter = {} as CompletionsProviderAdapter
 
 const config: AppConfig = {
   channels: [
@@ -16,9 +16,10 @@ const config: AppConfig = {
   },
 }
 
-const registry = new Map<string, ProviderAdapter>([
-  ['ant', fakeAdapter],
-  ['oai', fakeAdapter],
+// Registry keyed by model alias (not channel name)
+const registry = new Map<string, CompletionsProviderAdapter>([
+  ['claude-sonnet', fakeAdapter],
+  ['gpt-4o', fakeAdapter],
 ])
 
 describe('resolveRoute', () => {
@@ -40,8 +41,8 @@ describe('resolveRoute', () => {
     expect(route).toBeNull()
   })
 
-  it('returns null when alias exists but channel is missing from registry', () => {
-    const emptyRegistry = new Map<string, ProviderAdapter>()
+  it('returns null when alias exists but is missing from registry', () => {
+    const emptyRegistry = new Map<string, CompletionsProviderAdapter>()
     const route = resolveRoute('claude-sonnet', config, emptyRegistry)
     expect(route).toBeNull()
   })

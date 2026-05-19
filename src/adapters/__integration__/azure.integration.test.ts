@@ -1,6 +1,6 @@
 import { describe } from 'vitest'
 import { createApp } from '../../server.js'
-import { buildAdapterRegistry } from '../registry.js'
+import { buildCompletionsRegistry } from '../registry.js'
 import type { AppConfig } from '../../types.js'
 import { runProviderSuite } from './helpers/providerSuite.js'
 
@@ -34,7 +34,7 @@ function makeAoaiApp(channelName: string, modelAlias: string, deploymentId: stri
     ],
     models: { [modelAlias]: { channel: channelName, model: modelAlias, deploymentId } },
   }
-  return createApp(config, buildAdapterRegistry(config.channels))
+  return createApp(config, buildCompletionsRegistry(config))
 }
 
 function makeFoundryApp(channelName: string, modelAlias: string, modelId: string) {
@@ -45,10 +45,18 @@ function makeFoundryApp(channelName: string, modelAlias: string, modelId: string
   }
   const baseUrl = FOUNDRY_ENDPOINT.replace(/\/$/, '') + '/models'
   const config: AppConfig = {
-    channels: [{ name: channelName, type: 'openai-compatible', baseUrl, apiKey: FOUNDRY_KEY }],
+    channels: [
+      {
+        name: channelName,
+        type: 'llm-server',
+        baseUrl,
+        apiKey: FOUNDRY_KEY,
+        protocols: ['openai'] as Array<'openai' | 'anthropic'>,
+      },
+    ],
     models: { [modelAlias]: { channel: channelName, model: modelId } },
   }
-  return createApp(config, buildAdapterRegistry(config.channels))
+  return createApp(config, buildCompletionsRegistry(config))
 }
 
 describe.skipIf(!hasAoaiCredentials)('Azure OpenAI — gpt-4o — integration', () => {

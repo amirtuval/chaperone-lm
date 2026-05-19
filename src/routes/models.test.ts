@@ -2,17 +2,17 @@ import { describe, it, expect } from 'vitest'
 import request from 'supertest'
 import { createApp } from '../server.js'
 import type { AppConfig } from '../types.js'
-import type { ProviderAdapter } from '../adapters/types.js'
+import type { CompletionsProviderAdapter } from '../adapters/types.js'
 
-function makeAdapter(): ProviderAdapter {
-  return { handleRequest: async () => {} }
+function makeAdapter(): CompletionsProviderAdapter {
+  return { handleCompletionsRequest: async () => {} }
 }
 
 const config: AppConfig = {
   channels: [
     { name: 'ant', type: 'anthropic', apiKey: 'key' },
     { name: 'oai', type: 'openai', apiKey: 'key' },
-    { name: 'vllm', type: 'openai-compatible', baseUrl: 'http://localhost:8000' },
+    { name: 'vllm', type: 'llm-server', baseUrl: 'http://localhost:8000', protocols: ['openai'] },
   ],
   models: {
     'claude-sonnet': { channel: 'ant', model: 'claude-sonnet-4-5' },
@@ -21,10 +21,11 @@ const config: AppConfig = {
   },
 }
 
-const registry = new Map<string, ProviderAdapter>([
-  ['ant', makeAdapter()],
-  ['oai', makeAdapter()],
-  ['vllm', makeAdapter()],
+// Registry keyed by alias
+const registry = new Map<string, CompletionsProviderAdapter>([
+  ['claude-sonnet', makeAdapter()],
+  ['gpt-4o', makeAdapter()],
+  ['llama-70b', makeAdapter()],
 ])
 
 const app = createApp(config, registry)
@@ -52,6 +53,6 @@ describe('GET /v1/models', () => {
     const byId = Object.fromEntries(res.body.data.map((m: { id: string }) => [m.id, m]))
     expect(byId['claude-sonnet'].owned_by).toBe('anthropic')
     expect(byId['gpt-4o'].owned_by).toBe('openai')
-    expect(byId['llama-70b'].owned_by).toBe('openai-compatible')
+    expect(byId['llama-70b'].owned_by).toBe('llm-server')
   })
 })

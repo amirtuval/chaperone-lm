@@ -1,6 +1,6 @@
 import { describe } from 'vitest'
 import { createApp } from '../../server.js'
-import { buildAdapterRegistry } from '../registry.js'
+import { buildCompletionsRegistry } from '../registry.js'
 import type { AppConfig } from '../../types.js'
 import { runProviderSuite } from './helpers/providerSuite.js'
 
@@ -12,6 +12,6 @@ const config: AppConfig = {
 }
 
 describe.skipIf(!process.env.GOOGLE_GENERATIVE_AI_API_KEY)('Google adapter — integration', () => {
-  const app = createApp(config, buildAdapterRegistry(config.channels))
+  const app = createApp(config, buildCompletionsRegistry(config))
   runProviderSuite({ app, modelAlias: 'gemini-flash', strictFinishReason: true })
 })

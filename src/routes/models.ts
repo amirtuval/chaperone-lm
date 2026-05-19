@@ -1,10 +1,10 @@
 import type { Request, Response } from 'express'
 import type { AppConfig } from '../types.js'
-import type { ProviderAdapter } from '../adapters/types.js'
+import type { CompletionsProviderAdapter } from '../adapters/types.js'
 
 export function makeModelsHandler(
   config: AppConfig,
-  _adapterRegistry: Map<string, ProviderAdapter>
+  _completionsRegistry: Map<string, CompletionsProviderAdapter>
 ) {
   return (_req: Request, res: Response) => {
     const data = Object.entries(config.models).map(([alias, modelConfig]) => {

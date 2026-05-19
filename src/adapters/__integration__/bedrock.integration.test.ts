@@ -1,6 +1,6 @@
 import { describe } from 'vitest'
 import { createApp } from '../../server.js'
-import { buildAdapterRegistry } from '../registry.js'
+import { buildCompletionsRegistry } from '../registry.js'
 import type { AppConfig } from '../../types.js'
 import { runProviderSuite } from './helpers/providerSuite.js'
 
@@ -15,7 +15,7 @@ function makeApp(modelAlias: string, modelId: string) {
     channels: [baseChannel],
     models: { [modelAlias]: { channel: 'bedrock-test', model: modelId } },
   }
-  const registry = buildAdapterRegistry(config.channels)
+  const registry = buildCompletionsRegistry(config)
   return createApp(config, registry)
 }
 
