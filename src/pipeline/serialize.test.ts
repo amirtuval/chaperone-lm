@@ -257,7 +257,11 @@ describe('serializeGenerate', () => {
     )
 
     const body = res.getJson() as Record<string, unknown>
-    const message = (body.choices as Array<{ message: Record<string, unknown> }>)[0].message
+    const choices = body.choices as Array<{
+      message: Record<string, unknown>
+      finish_reason: string
+    }>
+    const message = choices[0].message
     expect(message['content']).toBeNull()
     const toolCalls = message['tool_calls'] as Array<Record<string, unknown>>
     expect(Array.isArray(toolCalls)).toBe(true)
@@ -266,5 +270,36 @@ describe('serializeGenerate', () => {
     expect((toolCalls[0]['function'] as Record<string, unknown>)['arguments']).toBe(
       '{"city":"London"}'
     )
+    // V3 uses 'tool-calls' (hyphen) but OpenAI wire format requires 'tool_calls' (underscore)
+    expect(choices[0].finish_reason).toBe('tool_calls')
+  })
+
+  it('normalizes finish_reason tool-calls → tool_calls in streams', async () => {
+    const res = mockRes()
+    await serializeStream(
+      makeStream([
+        {
+          type: 'finish',
+          finishReason: { unified: 'tool-calls', raw: 'tool_use' },
+          usage: {
+            inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 5, text: 5, reasoning: 0 },
+          },
+        },
+      ]),
+      'my-model',
+      res as never
+    )
+
+    const dataLines = res
+      .getChunks()
+      .filter((c) => c.startsWith('data: ') && !c.includes('[DONE]'))
+      .map((c) => JSON.parse(c.replace('data: ', '')))
+
+    const finishChunk = dataLines.find(
+      (c: { choices: Array<{ finish_reason: string | null }> }) =>
+        c.choices[0].finish_reason !== null
+    )
+    expect(finishChunk?.choices[0].finish_reason).toBe('tool_calls')
   })
 })

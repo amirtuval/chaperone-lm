@@ -99,3 +99,11 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: yarn test:integration --reporter=verbose src/adapters/__integration__/openai.integration.test.ts
+
+      - name: Run OpenAI SDK harness tests (protocol compliance)
+        if: github.event.inputs.provider == 'all' || github.event_name == 'schedule'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          VERTEX_PROJECT: ${{ secrets.VERTEX_PROJECT }}
+        run: yarn test:integration --reporter=verbose src/adapters/__integration__/harness.integration.test.ts

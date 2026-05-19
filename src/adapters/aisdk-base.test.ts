@@ -104,7 +104,7 @@ describe('buildPrompt', () => {
             type: 'tool-call',
             toolCallId: 'call-1',
             toolName: 'get_weather',
-            input: '{"city":"London"}',
+            input: { city: 'London' },
           },
         ],
       })
@@ -123,7 +123,7 @@ describe('buildPrompt', () => {
       const msg = prompt[0] as { role: string; content: unknown[] }
       expect(msg.content).toHaveLength(2)
       expect(msg.content[0]).toMatchObject({ type: 'text', text: 'Let me check that.' })
-      expect(msg.content[1]).toMatchObject({ type: 'tool-call', toolCallId: 'call-1' })
+      expect(msg.content[1]).toMatchObject({ type: 'tool-call', toolCallId: 'call-1', input: {} })
     })
   })
 
