@@ -251,11 +251,7 @@ describe.skipIf(!OPENAI_API_KEY)('OpenAI SDK harness → OpenAI direct (gpt-4o-m
   })
   afterAll(() => stop())
 
-  runHarnessSuite(
-    'OpenAI direct',
-    () => new OpenAI({ apiKey: 'local', baseURL }),
-    'gpt-4o-mini'
-  )
+  runHarnessSuite('OpenAI direct', () => new OpenAI({ apiKey: 'local', baseURL }), 'gpt-4o-mini')
 })
 
 const VERTEX_GEMINI_MODEL = process.env.VERTEX_GEMINI_MODEL ?? 'gemini-2.5-flash'
@@ -283,10 +279,6 @@ describe.skipIf(!VERTEX_PROJECT)(
     })
     afterAll(() => stop())
 
-    runHarnessSuite(
-      'Vertex Gemini',
-      () => new OpenAI({ apiKey: 'local', baseURL }),
-      'gemini-flash'
-    )
+    runHarnessSuite('Vertex Gemini', () => new OpenAI({ apiKey: 'local', baseURL }), 'gemini-flash')
   }
 )

@@ -257,7 +257,10 @@ describe('serializeGenerate', () => {
     )
 
     const body = res.getJson() as Record<string, unknown>
-    const choices = body.choices as Array<{ message: Record<string, unknown>; finish_reason: string }>
+    const choices = body.choices as Array<{
+      message: Record<string, unknown>
+      finish_reason: string
+    }>
     const message = choices[0].message
     expect(message['content']).toBeNull()
     const toolCalls = message['tool_calls'] as Array<Record<string, unknown>>

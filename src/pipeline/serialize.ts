@@ -95,7 +95,11 @@ export async function serializeStream(
           sse({
             ...base,
             choices: [
-              { index: 0, delta: {}, finish_reason: toOpenAIFinishReason(part.finishReason.unified) },
+              {
+                index: 0,
+                delta: {},
+                finish_reason: toOpenAIFinishReason(part.finishReason.unified),
+              },
             ],
           })
         }
@@ -154,7 +158,9 @@ export function serializeGenerate(
     object: 'chat.completion',
     created,
     model: modelAlias,
-    choices: [{ index: 0, message, finish_reason: toOpenAIFinishReason(result.finishReason.unified) }],
+    choices: [
+      { index: 0, message, finish_reason: toOpenAIFinishReason(result.finishReason.unified) },
+    ],
     usage: {
       prompt_tokens: promptTokens,
       completion_tokens: completionTokens,
