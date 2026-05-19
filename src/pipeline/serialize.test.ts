@@ -103,14 +103,20 @@ describe('serializeStream', () => {
       expect(typeof c.created).toBe('number')
     }
 
+    // Guard: some chunks (e.g. trailing usage chunk) have choices:[]
+    const withChoices = (c: { choices: unknown[] }) => c.choices.length > 0
+
     expect(parsed[0].choices[0].delta).toEqual({ role: 'assistant', content: '' })
 
     const textChunks = parsed.filter(
-      (c) => typeof c.choices[0].delta.content === 'string' && c.choices[0].delta.content.length > 0
+      (c) =>
+        withChoices(c) &&
+        typeof c.choices[0].delta.content === 'string' &&
+        c.choices[0].delta.content.length > 0
     )
     expect(textChunks.length).toBeGreaterThan(0)
 
-    const finishChunk = parsed.at(-1)
+    const finishChunk = parsed.find((c) => withChoices(c) && c.choices[0].finish_reason != null)
     expect(finishChunk.choices[0].delta).toEqual({})
     expect(finishChunk.choices[0].finish_reason).toBe('stop')
 
@@ -272,6 +278,66 @@ describe('serializeGenerate', () => {
     )
     // V3 uses 'tool-calls' (hyphen) but OpenAI wire format requires 'tool_calls' (underscore)
     expect(choices[0].finish_reason).toBe('tool_calls')
+  })
+
+  it('emits a trailing usage chunk when includeUsage=true', async () => {
+    const res = mockRes()
+    await serializeStream(
+      makeStream([
+        { type: 'text-delta', id: '1', delta: 'Hi' },
+        {
+          type: 'finish',
+          finishReason: { unified: 'stop', raw: 'stop' },
+          usage: {
+            inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 5, text: 5, reasoning: 0 },
+          },
+        },
+      ]),
+      'my-model',
+      res as never,
+      true
+    )
+
+    const dataLines = res
+      .getChunks()
+      .filter((c) => c.startsWith('data: ') && !c.includes('[DONE]'))
+      .map((c) => JSON.parse(c.replace('data: ', '')))
+
+    const usageChunk = dataLines.find(
+      (c: { choices: unknown[]; usage?: unknown }) =>
+        Array.isArray(c.choices) && c.choices.length === 0
+    )
+    expect(usageChunk).toBeDefined()
+    expect(usageChunk.usage).toEqual({ prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 })
+  })
+
+  it('does not emit a trailing usage chunk when includeUsage=false (default)', async () => {
+    const res = mockRes()
+    await serializeStream(
+      makeStream([
+        {
+          type: 'finish',
+          finishReason: { unified: 'stop', raw: 'stop' },
+          usage: {
+            inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 5, text: 5, reasoning: 0 },
+          },
+        },
+      ]),
+      'my-model',
+      res as never
+    )
+
+    const dataLines = res
+      .getChunks()
+      .filter((c) => c.startsWith('data: ') && !c.includes('[DONE]'))
+      .map((c) => JSON.parse(c.replace('data: ', '')))
+
+    const usageChunk = dataLines.find(
+      (c: { choices: unknown[] }) => Array.isArray(c.choices) && c.choices.length === 0
+    )
+    expect(usageChunk).toBeUndefined()
   })
 
   it('normalizes finish_reason tool-calls → tool_calls in streams', async () => {

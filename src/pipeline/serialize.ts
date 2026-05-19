@@ -16,7 +16,8 @@ function toOpenAIFinishReason(unified: string): string {
 export async function serializeStream(
   stream: ReadableStream<LanguageModelV3StreamPart>,
   modelAlias: string,
-  res: Response
+  res: Response,
+  includeUsage = false
 ): Promise<void> {
   const id = generateId()
   const created = Math.floor(Date.now() / 1000)
@@ -102,6 +103,19 @@ export async function serializeStream(
               },
             ],
           })
+          if (includeUsage) {
+            const promptTokens = part.usage?.inputTokens?.total ?? 0
+            const completionTokens = part.usage?.outputTokens?.total ?? 0
+            sse({
+              ...base,
+              choices: [],
+              usage: {
+                prompt_tokens: promptTokens,
+                completion_tokens: completionTokens,
+                total_tokens: promptTokens + completionTokens,
+              },
+            })
+          }
         }
       }
     } finally {
