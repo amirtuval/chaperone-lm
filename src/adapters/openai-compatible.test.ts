@@ -210,6 +210,28 @@ describe('OpenAICompatibleAdapter.handleRequest', () => {
     expect(res.end).toHaveBeenCalled()
   })
 
+  it('injects stream_options.include_usage=true for streaming requests', async () => {
+    const mockFetch = vi.fn().mockResolvedValue(makeFetchResponse('{}'))
+    vi.stubGlobal('fetch', mockFetch)
+
+    await adapter.handleRequest(makeReq({ stream: true }), makeRes(), makeCtx())
+
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit]
+    const sentBody = JSON.parse(init.body as string)
+    expect(sentBody.stream_options?.include_usage).toBe(true)
+  })
+
+  it('does not inject stream_options for non-streaming requests', async () => {
+    const mockFetch = vi.fn().mockResolvedValue(makeFetchResponse('{}'))
+    vi.stubGlobal('fetch', mockFetch)
+
+    await adapter.handleRequest(makeReq({ stream: false }), makeRes(), makeCtx())
+
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit]
+    const sentBody = JSON.parse(init.body as string)
+    expect(sentBody.stream_options).toBeUndefined()
+  })
+
   it('returns 502 and does not throw when fetch rejects', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')))
     const res = makeRes()

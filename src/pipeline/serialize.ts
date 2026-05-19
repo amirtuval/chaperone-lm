@@ -102,6 +102,19 @@ export async function serializeStream(
               },
             ],
           })
+          // Trailing usage chunk — same pattern as OpenAI's stream_options.include_usage.
+          // Clients like opencode read token counts and cost from this chunk.
+          const promptTokens = part.usage?.inputTokens?.total ?? 0
+          const completionTokens = part.usage?.outputTokens?.total ?? 0
+          sse({
+            ...base,
+            choices: [],
+            usage: {
+              prompt_tokens: promptTokens,
+              completion_tokens: completionTokens,
+              total_tokens: promptTokens + completionTokens,
+            },
+          })
         }
       }
     } finally {

@@ -82,7 +82,21 @@ export abstract class PassthroughAdapter implements ProviderAdapter {
     const baseUrl = this.getBaseUrl(ctx.channelConfig).replace(/\/$/, '')
     const authHeaders = this.getAuthHeaders(ctx.channelConfig)
 
-    const body: GatewayRequest = { ...(req.body as GatewayRequest), model: ctx.upstreamModelId }
+    const reqBody = req.body as GatewayRequest
+    // Inject stream_options.include_usage so upstream returns token counts in the
+    // trailing SSE chunk — clients like opencode need this to display stats.
+    const streamOptions =
+      reqBody.stream === true
+        ? {
+            stream_options: {
+              include_usage: true,
+              ...((reqBody as unknown as Record<string, unknown>)['stream_options'] as
+                | object
+                | undefined),
+            },
+          }
+        : {}
+    const body: GatewayRequest = { ...reqBody, model: ctx.upstreamModelId, ...streamOptions }
 
     let upstream: globalThis.Response
     try {
