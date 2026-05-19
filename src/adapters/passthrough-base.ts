@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express'
 import type { ChannelConfig } from '../types.js'
 import type { ProviderAdapter, RouteContext, GatewayRequest } from './types.js'
+import { logger } from '../logger.js'
 
 const decoder = new TextDecoder()
 const encoder = new TextEncoder()
@@ -84,9 +85,12 @@ export abstract class PassthroughAdapter implements ProviderAdapter {
 
     const body: GatewayRequest = { ...(req.body as GatewayRequest), model: ctx.upstreamModelId }
 
+    const upstreamUrl = `${baseUrl}/chat/completions`
+    logger.debug({ url: upstreamUrl, model: ctx.upstreamModelId, stream: body.stream ?? false }, 'upstream request')
+
     let upstream: globalThis.Response
     try {
-      upstream = await fetch(`${baseUrl}/chat/completions`, {
+      upstream = await fetch(upstreamUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -96,6 +100,7 @@ export abstract class PassthroughAdapter implements ProviderAdapter {
         body: JSON.stringify(body),
       })
     } catch (err) {
+      logger.error({ err, url: upstreamUrl, model: ctx.upstreamModelId }, 'upstream connection error')
       res.status(502).json({
         error: {
           message: err instanceof Error ? err.message : 'Upstream connection error',
@@ -105,8 +110,11 @@ export abstract class PassthroughAdapter implements ProviderAdapter {
       return
     }
 
-    res.status(upstream.status)
     const ct = upstream.headers.get('content-type') ?? ''
+    const upstreamLevel = upstream.status >= 500 ? 'error' : upstream.status >= 400 ? 'warn' : 'debug'
+    logger[upstreamLevel]({ status: upstream.status, contentType: ct, model: ctx.upstreamModelId }, 'upstream response')
+
+    res.status(upstream.status)
     if (ct) res.setHeader('Content-Type', ct)
 
     if (!upstream.body) {
