@@ -96,7 +96,10 @@ describe('POST /v1/chat/completions', () => {
         {
           type: 'finish',
           finishReason: { unified: 'stop', raw: 'stop' },
-          usage: { inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: 3, text: 3, reasoning: 0 } },
+          usage: {
+            inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 3, text: 3, reasoning: 0 },
+          },
         },
       ])
     )
@@ -118,7 +121,10 @@ describe('POST /v1/chat/completions', () => {
         {
           type: 'finish',
           finishReason: { unified: 'stop', raw: 'stop' },
-          usage: { inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: 3, text: 3, reasoning: 0 } },
+          usage: {
+            inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 3, text: 3, reasoning: 0 },
+          },
         },
       ])
     )

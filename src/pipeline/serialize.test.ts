@@ -47,7 +47,14 @@ describe('serializeStream', () => {
       makeStream([
         { type: 'text-delta', id: '1', delta: 'Hello' },
         { type: 'text-delta', id: '2', delta: ' world' },
-        { type: 'finish', finishReason: { unified: 'stop', raw: 'stop' }, usage: { inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: 2, text: 2, reasoning: 0 } } },
+        {
+          type: 'finish',
+          finishReason: { unified: 'stop', raw: 'stop' },
+          usage: {
+            inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 2, text: 2, reasoning: 0 },
+          },
+        },
       ]),
       'my-model',
       res as never
@@ -71,7 +78,14 @@ describe('serializeStream', () => {
     await serializeStream(
       makeStream([
         { type: 'text-delta', id: '1', delta: 'Hi' },
-        { type: 'finish', finishReason: { unified: 'stop', raw: 'stop' }, usage: { inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: 1, text: 1, reasoning: 0 } } },
+        {
+          type: 'finish',
+          finishReason: { unified: 'stop', raw: 'stop' },
+          usage: {
+            inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 1, text: 1, reasoning: 0 },
+          },
+        },
       ]),
       'my-model',
       res as never
@@ -106,7 +120,16 @@ describe('serializeStream', () => {
   it('emits Content-Type text/event-stream header', async () => {
     const res = mockRes()
     await serializeStream(
-      makeStream([{ type: 'finish', finishReason: { unified: 'stop', raw: 'stop' }, usage: { inputTokens: { total: 0, noCache: 0, cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: 0, text: 0, reasoning: 0 } } }]),
+      makeStream([
+        {
+          type: 'finish',
+          finishReason: { unified: 'stop', raw: 'stop' },
+          usage: {
+            inputTokens: { total: 0, noCache: 0, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 0, text: 0, reasoning: 0 },
+          },
+        },
+      ]),
       'my-model',
       res as never
     )
@@ -120,7 +143,14 @@ describe('serializeStream', () => {
         { type: 'tool-input-start', id: 'call-1', toolName: 'get_weather' },
         { type: 'tool-input-delta', id: 'call-1', delta: '{"city":' },
         { type: 'tool-input-delta', id: 'call-1', delta: '"London"}' },
-        { type: 'finish', finishReason: { unified: 'tool-calls', raw: 'tool_use' }, usage: { inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: 5, text: 5, reasoning: 0 } } },
+        {
+          type: 'finish',
+          finishReason: { unified: 'tool-calls', raw: 'tool_use' },
+          usage: {
+            inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 5, text: 5, reasoning: 0 },
+          },
+        },
       ]),
       'my-model',
       res as never
@@ -179,7 +209,10 @@ describe('serializeGenerate', () => {
     const body = res.getJson() as Record<string, unknown>
     expect(body.object).toBe('chat.completion')
     expect(body.model).toBe('my-model')
-    const choices = body.choices as Array<{ message: { content: string; role: string }; finish_reason: string }>
+    const choices = body.choices as Array<{
+      message: { content: string; role: string }
+      finish_reason: string
+    }>
     expect(choices[0].message.content).toBe('Hi there')
     expect(choices[0].finish_reason).toBe('stop')
   })
@@ -230,6 +263,8 @@ describe('serializeGenerate', () => {
     expect(Array.isArray(toolCalls)).toBe(true)
     expect(toolCalls[0]['id']).toBe('call-1')
     expect((toolCalls[0]['function'] as Record<string, unknown>)['name']).toBe('get_weather')
-    expect((toolCalls[0]['function'] as Record<string, unknown>)['arguments']).toBe('{"city":"London"}')
+    expect((toolCalls[0]['function'] as Record<string, unknown>)['arguments']).toBe(
+      '{"city":"London"}'
+    )
   })
 })

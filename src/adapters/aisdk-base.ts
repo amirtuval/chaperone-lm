@@ -20,7 +20,10 @@ function buildPrompt(messages: GatewayRequest['messages']): LanguageModelV3Promp
     if (m.role === 'system') {
       prompt.push({ role: 'system', content: typeof m.content === 'string' ? m.content : '' })
     } else if (m.role === 'user') {
-      prompt.push({ role: 'user', content: [{ type: 'text', text: typeof m.content === 'string' ? m.content : '' }] })
+      prompt.push({
+        role: 'user',
+        content: [{ type: 'text', text: typeof m.content === 'string' ? m.content : '' }],
+      })
     } else if (m.role === 'assistant') {
       prompt.push({
         role: 'assistant',

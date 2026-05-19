@@ -55,7 +55,9 @@ export function wrapV2AsV3(model: LanguageModelV2): LanguageModelV3 {
     async doStream(options: LanguageModelV3CallOptions) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { stream } = await model.doStream(options as any)
-      const normalized = (stream as unknown as ReadableStream<LanguageModelV3StreamPart>).pipeThrough(
+      const normalized = (
+        stream as unknown as ReadableStream<LanguageModelV3StreamPart>
+      ).pipeThrough(
         new TransformStream<LanguageModelV3StreamPart, LanguageModelV3StreamPart>({
           transform(chunk, controller) {
             if (chunk.type === 'finish') {

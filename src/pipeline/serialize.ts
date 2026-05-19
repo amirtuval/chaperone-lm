@@ -24,7 +24,10 @@ export async function serializeStream(
 
   try {
     // OpenAI SSE spec: first chunk must establish role
-    sse({ ...base, choices: [{ index: 0, delta: { role: 'assistant', content: '' }, finish_reason: null }] })
+    sse({
+      ...base,
+      choices: [{ index: 0, delta: { role: 'assistant', content: '' }, finish_reason: null }],
+    })
 
     const toolCallIndexMap = new Map<string, number>()
     let toolCallCounter = 0
@@ -36,9 +39,17 @@ export async function serializeStream(
         if (done) break
 
         if (part.type === 'text-delta') {
-          sse({ ...base, choices: [{ index: 0, delta: { content: part.delta }, finish_reason: null }] })
+          sse({
+            ...base,
+            choices: [{ index: 0, delta: { content: part.delta }, finish_reason: null }],
+          })
         } else if (part.type === 'reasoning-delta') {
-          sse({ ...base, choices: [{ index: 0, delta: { content: '', reasoning: part.delta }, finish_reason: null }] })
+          sse({
+            ...base,
+            choices: [
+              { index: 0, delta: { content: '', reasoning: part.delta }, finish_reason: null },
+            ],
+          })
         } else if (part.type === 'tool-input-start') {
           const idx = toolCallCounter++
           toolCallIndexMap.set(part.id, idx)
@@ -49,7 +60,12 @@ export async function serializeStream(
                 index: 0,
                 delta: {
                   tool_calls: [
-                    { index: idx, id: part.id, type: 'function', function: { name: part.toolName, arguments: '' } },
+                    {
+                      index: idx,
+                      id: part.id,
+                      type: 'function',
+                      function: { name: part.toolName, arguments: '' },
+                    },
                   ],
                 },
                 finish_reason: null,
@@ -69,7 +85,10 @@ export async function serializeStream(
             ],
           })
         } else if (part.type === 'finish') {
-          sse({ ...base, choices: [{ index: 0, delta: {}, finish_reason: part.finishReason.unified }] })
+          sse({
+            ...base,
+            choices: [{ index: 0, delta: {}, finish_reason: part.finishReason.unified }],
+          })
         }
       }
     } finally {

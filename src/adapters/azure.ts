@@ -36,7 +36,11 @@ export class AzureAdapter extends AISdkAdapter {
     return transformed
   }
 
-  createModel(channelConfig: ChannelConfig, modelId: string, deploymentId?: string): LanguageModelV3 {
+  createModel(
+    channelConfig: ChannelConfig,
+    modelId: string,
+    deploymentId?: string
+  ): LanguageModelV3 {
     if (channelConfig.type !== 'azure') {
       throw new Error(`AzureAdapter requires channel type 'azure', got '${channelConfig.type}'`)
     }
