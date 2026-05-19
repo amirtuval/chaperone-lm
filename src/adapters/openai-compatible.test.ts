@@ -157,21 +157,56 @@ describe('OpenAICompatibleAdapter.handleRequest', () => {
     expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'text/event-stream')
   })
 
-  it('pipes response body chunks and calls end', async () => {
+  it('rewrites model field in JSON response to alias', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
         status: 200,
         headers: { get: () => 'application/json' },
-        body: makeReadableStream(['{"id":', '"abc"}']),
+        body: makeReadableStream(['{"id":"1","model":"google/gemini-2.0-flash","choices":[]}']),
       })
     )
     const res = makeRes()
 
     await adapter.handleRequest(makeReq(), res, makeCtx())
 
-    const body = Buffer.concat(res._written.map((c) => Buffer.from(c))).toString()
-    expect(body).toBe('{"id":"abc"}')
+    const endArg = (res.end as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
+    expect(JSON.parse(endArg).model).toBe('my-alias')
+  })
+
+  it('rewrites model field in SSE chunks to alias', async () => {
+    const chunk =
+      'data: {"id":"1","model":"google/gemini-2.0-flash","choices":[{"delta":{"content":"hi"}}]}\n'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        status: 200,
+        headers: { get: (h: string) => (h === 'content-type' ? 'text/event-stream' : null) },
+        body: makeReadableStream([chunk, 'data: [DONE]\n']),
+      })
+    )
+    const res = makeRes()
+
+    await adapter.handleRequest(makeReq(), res, makeCtx())
+
+    const written = Buffer.concat(res._written.map((c) => Buffer.from(c))).toString()
+    const dataLine = written.split('\n').find((l) => l.startsWith('data: ') && l !== 'data: [DONE]')
+    expect(JSON.parse(dataLine!.slice('data: '.length)).model).toBe('my-alias')
+  })
+
+  it('passes response body through and calls end', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        status: 200,
+        headers: { get: () => 'application/json' },
+        body: makeReadableStream(['{"id":"1","choices":[]}']),
+      })
+    )
+    const res = makeRes()
+
+    await adapter.handleRequest(makeReq(), res, makeCtx())
+
     expect(res.end).toHaveBeenCalled()
   })
 
