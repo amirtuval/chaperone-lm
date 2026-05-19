@@ -15,11 +15,19 @@ function isAdapterError(result: unknown): result is AdapterRequestError {
 }
 
 function buildPrompt(messages: GatewayRequest['messages']): LanguageModelV3Prompt {
+  const systemTexts = messages
+    .filter((m) => m.role === 'system')
+    .map((m) => (typeof m.content === 'string' ? m.content : ''))
+    .filter(Boolean)
+
   const prompt: LanguageModelV3Prompt = []
+
+  if (systemTexts.length > 0) {
+    prompt.push({ role: 'system', content: systemTexts.join('\n\n') })
+  }
+
   for (const m of messages) {
-    if (m.role === 'system') {
-      prompt.push({ role: 'system', content: typeof m.content === 'string' ? m.content : '' })
-    } else if (m.role === 'user') {
+    if (m.role === 'user') {
       prompt.push({
         role: 'user',
         content: [{ type: 'text', text: typeof m.content === 'string' ? m.content : '' }],
