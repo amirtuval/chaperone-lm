@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { loadConfig } from './config/loader.js'
 import { buildAdapterRegistry } from './adapters/registry.js'
 import { createApp } from './server.js'
