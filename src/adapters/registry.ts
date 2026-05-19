@@ -1,5 +1,6 @@
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOpenAI } from '@ai-sdk/openai'
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createVertex } from '@ai-sdk/google-vertex'
 import { createVertexAnthropic } from '@ai-sdk/google-vertex/anthropic'
@@ -8,9 +9,16 @@ import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
 import { createAzure } from '@ai-sdk/azure'
 import type { LanguageModelV3 } from '@ai-sdk/provider'
 import type { AppConfig, ChannelConfig, ModelConfig } from '../types.js'
-import type { CompletionsProviderAdapter, AdapterRequestError, GatewayRequest } from './types.js'
+import type {
+  CompletionsProviderAdapter,
+  MessagesProviderAdapter,
+  AdapterRequestError,
+  GatewayRequest,
+} from './types.js'
 import { AISdkCompletionsAdapter } from './aisdk-completions.js'
+import { AISdkMessagesAdapter } from './aisdk-messages.js'
 import { OpenAIPassthroughAdapter } from './passthrough-openai.js'
+import { AnthropicPassthroughAdapter } from './passthrough-anthropic.js'
 import { wrapV2AsV3 } from './v2-compat.js'
 import { httpError } from './errors.js'
 
@@ -201,7 +209,76 @@ function createCompletionsAdapter(
 }
 
 // ---------------------------------------------------------------------------
-// Public registry builder
+// Messages adapter factory
+// ---------------------------------------------------------------------------
+
+function createMessagesAdapter(
+  ch: ChannelConfig,
+  modelConfig: ModelConfig
+): MessagesProviderAdapter {
+  const { model: modelId, deploymentId } = modelConfig
+
+  switch (ch.type) {
+    case 'anthropic':
+      return new AnthropicPassthroughAdapter('https://api.anthropic.com', {
+        'x-api-key': ch.apiKey,
+        'anthropic-version': '2023-06-01',
+      })
+
+    case 'openai':
+      return new AISdkMessagesAdapter(createOpenAI({ apiKey: ch.apiKey })(modelId))
+
+    case 'google':
+      return new AISdkMessagesAdapter(createGoogleGenerativeAI({ apiKey: ch.apiKey })(modelId))
+
+    case 'bedrock':
+      return new AISdkMessagesAdapter(
+        wrapV2AsV3(createAmazonBedrock({ region: ch.region })(modelId))
+      )
+
+    case 'vertex': {
+      const provider = ch.provider ?? 'gemini'
+      if (provider === 'anthropic') {
+        return new AISdkMessagesAdapter(
+          createVertexAnthropic({ project: ch.project, location: ch.region })(modelId)
+        )
+      } else if (provider === 'maas') {
+        return new AISdkMessagesAdapter(
+          createVertexMaas({ project: ch.project, location: ch.region })(modelId)
+        )
+      } else {
+        return new AISdkMessagesAdapter(
+          createVertex({ project: ch.project, location: ch.region })(modelId)
+        )
+      }
+    }
+
+    case 'azure':
+      return new AISdkMessagesAdapter(
+        createAzure({ resourceName: ch.resourceName, apiKey: ch.apiKey }).chat(
+          deploymentId ?? modelId
+        )
+      )
+
+    case 'llm-server': {
+      if (ch.protocols.includes('anthropic')) {
+        const authHeaders: Record<string, string> = ch.apiKey ? { 'x-api-key': ch.apiKey } : {}
+        return new AnthropicPassthroughAdapter(ch.baseUrl, authHeaders)
+      }
+      const authHeaders: Record<string, string> = ch.apiKey
+        ? { Authorization: `Bearer ${ch.apiKey}` }
+        : {}
+      return new AISdkMessagesAdapter(
+        createOpenAICompatible({ name: ch.name, baseURL: ch.baseUrl, headers: authHeaders })(
+          modelId
+        )
+      )
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Public registry builders
 // ---------------------------------------------------------------------------
 
 export function buildCompletionsRegistry(
@@ -214,6 +291,19 @@ export function buildCompletionsRegistry(
     const ch = channelMap.get(modelConfig.channel)
     if (!ch) continue
     registry.set(alias, createCompletionsAdapter(ch, modelConfig))
+  }
+
+  return registry
+}
+
+export function buildMessagesRegistry(config: AppConfig): Map<string, MessagesProviderAdapter> {
+  const registry = new Map<string, MessagesProviderAdapter>()
+  const channelMap = new Map(config.channels.map((ch) => [ch.name, ch]))
+
+  for (const [alias, modelConfig] of Object.entries(config.models)) {
+    const ch = channelMap.get(modelConfig.channel)
+    if (!ch) continue
+    registry.set(alias, createMessagesAdapter(ch, modelConfig))
   }
 
   return registry

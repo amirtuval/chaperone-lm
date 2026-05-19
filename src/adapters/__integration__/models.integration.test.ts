@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createServer } from 'node:http'
 import { createApp } from '../../server.js'
-import { buildCompletionsRegistry } from '../registry.js'
+import { buildCompletionsRegistry, buildMessagesRegistry } from '../registry.js'
 import type { AppConfig } from '../../types.js'
 
 const config: AppConfig = {
@@ -26,7 +26,7 @@ let baseURL: string
 let stopServer: () => void
 
 beforeAll(async () => {
-  const app = createApp(config, buildCompletionsRegistry(config))
+  const app = createApp(config, buildCompletionsRegistry(config), buildMessagesRegistry(config))
   const server = createServer(app)
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   const addr = server.address() as { port: number }

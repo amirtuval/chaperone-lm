@@ -57,7 +57,7 @@ describe('POST /v1/chat/completions', () => {
     const adapter = new AISdkCompletionsAdapter(makeModel([]))
     // Registry keyed by alias
     const registry = new Map<string, CompletionsProviderAdapter>([['test-model', adapter]])
-    const app = createApp(config, registry)
+    const app = createApp(config, registry, new Map())
 
     const res = await request(app)
       .post('/v1/chat/completions')
@@ -81,7 +81,7 @@ describe('POST /v1/chat/completions', () => {
       ])
     )
     const registry = new Map<string, CompletionsProviderAdapter>([['test-model', adapter]])
-    const app = createApp(config, registry)
+    const app = createApp(config, registry, new Map())
 
     const res = await request(app)
       .post('/v1/chat/completions')
@@ -106,7 +106,7 @@ describe('POST /v1/chat/completions', () => {
       ])
     )
     const registry = new Map<string, CompletionsProviderAdapter>([['test-model', adapter]])
-    const app = createApp(config, registry)
+    const app = createApp(config, registry, new Map())
 
     const res = await request(app)
       .post('/v1/chat/completions')
@@ -126,7 +126,7 @@ describe('POST /v1/chat/completions', () => {
     })
     const adapter = new AISdkCompletionsAdapter(makeModel([]), rejectingTransform)
     const registry = new Map<string, CompletionsProviderAdapter>([['test-model', adapter]])
-    const app = createApp(config, registry)
+    const app = createApp(config, registry, new Map())
 
     const res = await request(app)
       .post('/v1/chat/completions')

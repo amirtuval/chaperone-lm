@@ -1,14 +1,16 @@
 import express from 'express'
 import type { Request, Response, NextFunction } from 'express'
 import type { AppConfig } from './types.js'
-import type { CompletionsProviderAdapter } from './adapters/types.js'
+import type { CompletionsProviderAdapter, MessagesProviderAdapter } from './adapters/types.js'
 import { makeChatHandler } from './routes/chat.js'
 import { makeModelsHandler } from './routes/models.js'
+import { registerMessagesRoute } from './routes/messages.js'
 import { logger } from './logger.js'
 
 export function createApp(
   config: AppConfig,
-  completionsRegistry: Map<string, CompletionsProviderAdapter>
+  completionsRegistry: Map<string, CompletionsProviderAdapter>,
+  messagesRegistry: Map<string, MessagesProviderAdapter>
 ) {
   const app = express()
 
@@ -28,6 +30,7 @@ export function createApp(
 
   app.post('/v1/chat/completions', makeChatHandler(config, completionsRegistry))
   app.get('/v1/models', makeModelsHandler(config, completionsRegistry))
+  registerMessagesRoute(app, config, messagesRegistry)
 
   return app
 }

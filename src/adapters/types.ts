@@ -23,3 +23,7 @@ export interface RouteContext {
 export interface CompletionsProviderAdapter {
   handleCompletionsRequest(req: Request, res: Response, ctx: RouteContext): Promise<void>
 }
+
+export interface MessagesProviderAdapter {
+  handleMessagesRequest(req: Request, res: Response, ctx: RouteContext): Promise<void>
+}

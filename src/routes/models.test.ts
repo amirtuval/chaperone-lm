@@ -27,7 +27,7 @@ const registry = new Map<string, CompletionsProviderAdapter>([
   ['llama-70b', makeAdapter()],
 ])
 
-const app = createApp(config, registry)
+const app = createApp(config, registry, new Map())
 
 describe('GET /v1/models — OpenAI format (no anthropic-version header)', () => {
   it('returns a list of all configured model aliases', async () => {

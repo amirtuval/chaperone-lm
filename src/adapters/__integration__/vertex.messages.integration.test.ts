@@ -2,15 +2,14 @@ import { describe } from 'vitest'
 import { createApp } from '../../server.js'
 import { buildCompletionsRegistry, buildMessagesRegistry } from '../registry.js'
 import type { AppConfig } from '../../types.js'
-import { runProviderSuite } from './helpers/providerSuite.js'
+import { runMessagesProviderSuite } from './helpers/messagesProviderSuite.js'
 
-// All Vertex backends authenticate via Application Default Credentials (ADC).
-// Run: gcloud auth application-default login
+// Vertex AI — via AISdkMessagesAdapter (Gemini) or AnthropicPassthroughAdapter via AI SDK (Anthropic backend).
+// Authenticates via Application Default Credentials (ADC).
 // Required env vars: VERTEX_PROJECT, VERTEX_REGION (defaults to us-central1)
 
 const PROJECT = process.env.VERTEX_PROJECT
 const REGION = process.env.VERTEX_REGION ?? 'us-central1'
-// Anthropic models on Vertex are only servable in us-east5
 const ANTHROPIC_REGION = process.env.VERTEX_ANTHROPIC_REGION ?? 'us-east5'
 const hasCredentials = Boolean(PROJECT)
 
@@ -28,8 +27,8 @@ function makeApp(
   return createApp(config, buildCompletionsRegistry(config), buildMessagesRegistry(config))
 }
 
-describe.skipIf(!hasCredentials)('Vertex — Gemini 2.5 Flash — integration', () => {
-  runProviderSuite({
+describe.skipIf(!hasCredentials)('Vertex Messages API — Gemini 2.5 Flash — integration', () => {
+  runMessagesProviderSuite({
     app: makeApp('vertex-gemini', 'gemini', 'gemini-flash', 'gemini-2.5-flash'),
     modelAlias: 'gemini-flash',
     strictFinishReason: true,
@@ -37,9 +36,9 @@ describe.skipIf(!hasCredentials)('Vertex — Gemini 2.5 Flash — integration', 
 })
 
 describe.skipIf(!hasCredentials)(
-  'Vertex — Claude Sonnet 4.6 (Anthropic backend) — integration',
+  'Vertex Messages API — Claude Sonnet 4.6 (Anthropic backend) — integration',
   () => {
-    runProviderSuite({
+    runMessagesProviderSuite({
       app: makeApp(
         'vertex-anthropic',
         'anthropic',
@@ -52,11 +51,3 @@ describe.skipIf(!hasCredentials)(
     })
   }
 )
-
-describe.skipIf(!hasCredentials)('Vertex — DeepSeek V3.2 (MaaS backend) — integration', () => {
-  runProviderSuite({
-    app: makeApp('vertex-maas', 'maas', 'deepseek-v3', 'deepseek-ai/deepseek-v3.2-maas@001'),
-    modelAlias: 'deepseek-v3',
-    strictFinishReason: false,
-  })
-})

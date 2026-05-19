@@ -18,7 +18,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createServer } from 'node:http'
 import OpenAI from 'openai'
 import { createApp } from '../../server.js'
-import { buildCompletionsRegistry } from '../registry.js'
+import { buildCompletionsRegistry, buildMessagesRegistry } from '../registry.js'
 import type { AppConfig } from '../../types.js'
 
 // ---------------------------------------------------------------------------
@@ -26,7 +26,7 @@ import type { AppConfig } from '../../types.js'
 // ---------------------------------------------------------------------------
 
 async function startServer(config: AppConfig): Promise<{ baseURL: string; stop: () => void }> {
-  const app = createApp(config, buildCompletionsRegistry(config))
+  const app = createApp(config, buildCompletionsRegistry(config), buildMessagesRegistry(config))
   const server = createServer(app)
 
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))

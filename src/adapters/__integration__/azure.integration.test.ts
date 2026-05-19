@@ -1,6 +1,6 @@
 import { describe } from 'vitest'
 import { createApp } from '../../server.js'
-import { buildCompletionsRegistry } from '../registry.js'
+import { buildCompletionsRegistry, buildMessagesRegistry } from '../registry.js'
 import type { AppConfig } from '../../types.js'
 import { runProviderSuite } from './helpers/providerSuite.js'
 
@@ -34,7 +34,7 @@ function makeAoaiApp(channelName: string, modelAlias: string, deploymentId: stri
     ],
     models: { [modelAlias]: { channel: channelName, model: modelAlias, deploymentId } },
   }
-  return createApp(config, buildCompletionsRegistry(config))
+  return createApp(config, buildCompletionsRegistry(config), buildMessagesRegistry(config))
 }
 
 function makeFoundryApp(channelName: string, modelAlias: string, modelId: string) {
@@ -56,7 +56,7 @@ function makeFoundryApp(channelName: string, modelAlias: string, modelId: string
     ],
     models: { [modelAlias]: { channel: channelName, model: modelId } },
   }
-  return createApp(config, buildCompletionsRegistry(config))
+  return createApp(config, buildCompletionsRegistry(config), buildMessagesRegistry(config))
 }
 
 describe.skipIf(!hasAoaiCredentials)('Azure OpenAI — gpt-4o — integration', () => {
