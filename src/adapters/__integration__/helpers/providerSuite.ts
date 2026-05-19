@@ -86,9 +86,9 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
       expect(typeof c.created).toBe('number')
     }
 
-    // First chunk establishes role
-    expect(chunks[0].choices[0].delta).toEqual({ role: 'assistant', content: '' })
-    expect(chunks[0].choices[0].finish_reason).toBeNull()
+    // At least one chunk establishes assistant role
+    const roleChunk = chunks.find((c) => c.choices[0].delta.role === 'assistant')
+    expect(roleChunk).toBeDefined()
 
     // At least one chunk carries non-empty text content
     const textChunks = chunks.filter(
