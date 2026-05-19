@@ -14,7 +14,7 @@ export function createApp(
 ) {
   const app = express()
 
-  app.use(express.json())
+  app.use(express.json({ limit: '50mb' }))
 
   app.use((req: Request, res: Response, next: NextFunction) => {
     const start = Date.now()
@@ -28,9 +28,21 @@ export function createApp(
     next()
   })
 
+  app.all('/', (_req: Request, res: Response) => res.sendStatus(200))
+
   app.post('/v1/chat/completions', makeChatHandler(config, completionsRegistry))
   app.get('/v1/models', makeModelsHandler(config, completionsRegistry))
   registerMessagesRoute(app, config, messagesRegistry)
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  app.use((err: Error & { status?: number; type?: string }, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status ?? 500
+    logger.error({ err, status }, 'unhandled error')
+    res.status(status).json({
+      type: 'error',
+      error: { type: 'api_error', message: err.message },
+    })
+  })
 
   return app
 }
