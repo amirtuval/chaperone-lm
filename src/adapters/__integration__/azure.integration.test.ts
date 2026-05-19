@@ -77,9 +77,6 @@ describe.skipIf(!hasFoundryCredentials)(
       // Llama-3.3-70B on Foundry serverless has >60s latency for tool-call
       // requests; skip tool tests to avoid flaky timeouts.
       supportsTools: false,
-      // Foundry serverless has a low RPM limit; the first two tests consume the
-      // quota window so we wait for it to reset before the third request.
-      rateLimitDelayMs: 65000,
     })
   }
 )

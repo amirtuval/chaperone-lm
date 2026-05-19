@@ -18,12 +18,6 @@ export interface ProviderSuiteOptions {
    * tool use on the Converse API but not on ConverseStream, which the AI SDK always uses).
    */
   supportsTools?: boolean
-  /**
-   * Delay in ms to wait before the "handles multiple system messages" test.
-   * Use for endpoints with low RPM limits (e.g. Azure AI Foundry serverless)
-   * where earlier tests in the suite exhaust the rate limit window.
-   */
-  rateLimitDelayMs?: number
 }
 
 const GET_WEATHER_TOOL = {
@@ -39,116 +33,145 @@ const GET_WEATHER_TOOL = {
   },
 }
 
+// Test-client retry: the gateway correctly passes 429s through, but integration
+// tests should behave like a well-behaved client and back off on rate limits.
+async function withRetry(
+  fn: () => Promise<request.Response>,
+  maxRetries = 3
+): Promise<request.Response> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const res = await fn()
+    if (res.status !== 429) return res
+    const retryAfter = res.headers['retry-after']
+    const delayMs = retryAfter ? parseFloat(retryAfter) * 1000 : 60000
+    await new Promise((resolve) => setTimeout(resolve, delayMs))
+  }
+  return fn()
+}
+
 export function runProviderSuite(options: ProviderSuiteOptions): void {
-  const {
-    app,
-    modelAlias,
-    strictFinishReason = true,
-    supportsTools = true,
-    rateLimitDelayMs,
-  } = options
+  const { app, modelAlias, strictFinishReason = true, supportsTools = true } = options
   const itTool = supportsTools ? it : it.skip
 
-  it('returns a non-streaming response (stream: false)', async () => {
-    const res = await request(app)
-      .post('/v1/chat/completions')
-      .send({
-        model: modelAlias,
-        messages: [{ role: 'user', content: 'Say exactly the word: hello' }],
-        stream: false,
-      })
+  // Base timeout per request; multiplied up to account for retry waits (up to
+  // 3 retries × 60s backoff + the actual call time).
+  const timeout = 60000 * 4
 
-    expect(res.status).toBe(200)
-    expect(res.body.object).toBe('chat.completion')
-    expect(res.body.choices[0].message.role).toBe('assistant')
-    expect(typeof res.body.choices[0].message.content).toBe('string')
-    expect(res.body.choices[0].message.content.length).toBeGreaterThan(0)
-    expect(res.body.usage.prompt_tokens).toBeGreaterThan(0)
-    if (strictFinishReason) {
-      expect(res.body.choices[0].finish_reason).toBe('stop')
-    } else {
-      expect(res.body.choices[0].finish_reason).toBeTruthy()
-    }
-  }, 60000)
+  it(
+    'returns a non-streaming response (stream: false)',
+    async () => {
+      const res = await withRetry(() =>
+        request(app)
+          .post('/v1/chat/completions')
+          .send({
+            model: modelAlias,
+            messages: [{ role: 'user', content: 'Say exactly the word: hello' }],
+            stream: false,
+          })
+      )
 
-  it('returns a well-formed SSE stream (stream: true)', async () => {
-    const res = await request(app)
-      .post('/v1/chat/completions')
-      .send({
-        model: modelAlias,
-        messages: [{ role: 'user', content: 'Say exactly the word: hello' }],
-        stream: true,
-      })
+      expect(res.status).toBe(200)
+      expect(res.body.object).toBe('chat.completion')
+      expect(res.body.choices[0].message.role).toBe('assistant')
+      expect(typeof res.body.choices[0].message.content).toBe('string')
+      expect(res.body.choices[0].message.content.length).toBeGreaterThan(0)
+      expect(res.body.usage.prompt_tokens).toBeGreaterThan(0)
+      if (strictFinishReason) {
+        expect(res.body.choices[0].finish_reason).toBe('stop')
+      } else {
+        expect(res.body.choices[0].finish_reason).toBeTruthy()
+      }
+    },
+    timeout
+  )
 
-    expect(res.status).toBe(200)
-    expect(res.headers['content-type']).toContain('text/event-stream')
+  it(
+    'returns a well-formed SSE stream (stream: true)',
+    async () => {
+      const res = await withRetry(() =>
+        request(app)
+          .post('/v1/chat/completions')
+          .send({
+            model: modelAlias,
+            messages: [{ role: 'user', content: 'Say exactly the word: hello' }],
+            stream: true,
+          })
+      )
 
-    const lines = res.text.split('\n').filter((l) => l.startsWith('data: '))
-    expect(lines.at(-1)).toBe('data: [DONE]')
+      expect(res.status).toBe(200)
+      expect(res.headers['content-type']).toContain('text/event-stream')
 
-    const chunks = lines
-      .filter((l) => l !== 'data: [DONE]')
-      .map((l) => JSON.parse(l.slice('data: '.length)))
+      const lines = res.text.split('\n').filter((l) => l.startsWith('data: '))
+      expect(lines.at(-1)).toBe('data: [DONE]')
 
-    // Every chunk has the correct envelope
-    for (const c of chunks) {
-      expect(c.object).toBe('chat.completion.chunk')
-      expect(c.model).toBe(modelAlias)
-      expect(typeof c.id).toBe('string')
-      expect(typeof c.created).toBe('number')
-    }
+      const chunks = lines
+        .filter((l) => l !== 'data: [DONE]')
+        .map((l) => JSON.parse(l.slice('data: '.length)))
 
-    // Some providers send usage-only trailing chunks with choices:[]; guard throughout
-    const withChoices = (c: { choices?: unknown[] }) =>
-      Array.isArray(c.choices) && c.choices.length > 0
+      // Every chunk has the correct envelope
+      for (const c of chunks) {
+        expect(c.object).toBe('chat.completion.chunk')
+        expect(c.model).toBe(modelAlias)
+        expect(typeof c.id).toBe('string')
+        expect(typeof c.created).toBe('number')
+      }
 
-    // At least one chunk establishes assistant role
+      // Some providers send usage-only trailing chunks with choices:[]; guard throughout
+      const withChoices = (c: { choices?: unknown[] }) =>
+        Array.isArray(c.choices) && c.choices.length > 0
 
-    const roleChunk = chunks.find((c) => withChoices(c) && c.choices[0].delta?.role === 'assistant')
-    expect(roleChunk).toBeDefined()
+      // At least one chunk establishes assistant role
 
-    // At least one chunk carries non-empty text content
+      const roleChunk = chunks.find(
+        (c) => withChoices(c) && c.choices[0].delta?.role === 'assistant'
+      )
+      expect(roleChunk).toBeDefined()
 
-    const textChunks = chunks.filter(
-      (c) =>
-        withChoices(c) &&
-        typeof c.choices[0].delta?.content === 'string' &&
-        c.choices[0].delta.content.length > 0
-    )
-    expect(textChunks.length).toBeGreaterThan(0)
+      // At least one chunk carries non-empty text content
 
-    // Find the chunk that carries finish_reason (may not be the last if provider appends usage chunks)
+      const textChunks = chunks.filter(
+        (c) =>
+          withChoices(c) &&
+          typeof c.choices[0].delta?.content === 'string' &&
+          c.choices[0].delta.content.length > 0
+      )
+      expect(textChunks.length).toBeGreaterThan(0)
 
-    const finishChunk = chunks.find((c) => withChoices(c) && c.choices[0].finish_reason != null)
-    expect(finishChunk).toBeDefined()
-    if (strictFinishReason) {
-      expect(finishChunk.choices[0].finish_reason).toBe('stop')
-    } else {
-      expect(finishChunk.choices[0].finish_reason).toBeTruthy()
-    }
-  }, 60000)
+      // Find the chunk that carries finish_reason (may not be the last if provider appends usage chunks)
+
+      const finishChunk = chunks.find((c) => withChoices(c) && c.choices[0].finish_reason != null)
+      expect(finishChunk).toBeDefined()
+      if (strictFinishReason) {
+        expect(finishChunk.choices[0].finish_reason).toBe('stop')
+      } else {
+        expect(finishChunk.choices[0].finish_reason).toBeTruthy()
+      }
+    },
+    timeout
+  )
 
   it(
     'handles multiple system messages (stream: false)',
     async () => {
-      if (rateLimitDelayMs) await new Promise((resolve) => setTimeout(resolve, rateLimitDelayMs))
-      const res = await request(app)
-        .post('/v1/chat/completions')
-        .send({
-          model: modelAlias,
-          messages: [
-            { role: 'system', content: 'You are a helpful assistant.' },
-            { role: 'system', content: 'Always respond concisely.' },
-            { role: 'user', content: 'Say exactly the word: hello' },
-          ],
-          stream: false,
-        })
+      const res = await withRetry(() =>
+        request(app)
+          .post('/v1/chat/completions')
+          .send({
+            model: modelAlias,
+            messages: [
+              { role: 'system', content: 'You are a helpful assistant.' },
+              { role: 'system', content: 'Always respond concisely.' },
+              { role: 'user', content: 'Say exactly the word: hello' },
+            ],
+            stream: false,
+          })
+      )
 
       expect(res.status).toBe(200)
       expect(res.body.object).toBe('chat.completion')
       expect(res.body.choices[0].message.role).toBe('assistant')
     },
-    60000 + (options.rateLimitDelayMs ?? 0)
+    timeout
   )
 
   it('returns 404 for an unknown model alias', async () => {
@@ -166,15 +189,17 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
   itTool(
     'returns a tool call in the response (stream: false)',
     async () => {
-      const res = await request(app)
-        .post('/v1/chat/completions')
-        .send({
-          model: modelAlias,
-          messages: [{ role: 'user', content: 'What is the weather in London?' }],
-          stream: false,
-          tools: [GET_WEATHER_TOOL],
-          tool_choice: 'auto',
-        })
+      const res = await withRetry(() =>
+        request(app)
+          .post('/v1/chat/completions')
+          .send({
+            model: modelAlias,
+            messages: [{ role: 'user', content: 'What is the weather in London?' }],
+            stream: false,
+            tools: [GET_WEATHER_TOOL],
+            tool_choice: 'auto',
+          })
+      )
 
       expect(res.status).toBe(200)
       expect(res.body.object).toBe('chat.completion')
@@ -188,21 +213,23 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
       const args = JSON.parse(call.function.arguments)
       expect(typeof args.city).toBe('string')
     },
-    60000
+    timeout
   )
 
   itTool(
     'streams tool call chunks (stream: true)',
     async () => {
-      const res = await request(app)
-        .post('/v1/chat/completions')
-        .send({
-          model: modelAlias,
-          messages: [{ role: 'user', content: 'What is the weather in London?' }],
-          stream: true,
-          tools: [GET_WEATHER_TOOL],
-          tool_choice: 'auto',
-        })
+      const res = await withRetry(() =>
+        request(app)
+          .post('/v1/chat/completions')
+          .send({
+            model: modelAlias,
+            messages: [{ role: 'user', content: 'What is the weather in London?' }],
+            stream: true,
+            tools: [GET_WEATHER_TOOL],
+            tool_choice: 'auto',
+          })
+      )
 
       expect(res.status).toBe(200)
       expect(res.headers['content-type']).toContain('text/event-stream')
@@ -237,6 +264,6 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
       )
       expect(argChunks.length).toBeGreaterThan(0)
     },
-    60000
+    timeout
   )
 }
