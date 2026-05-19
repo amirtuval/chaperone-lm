@@ -86,18 +86,29 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
       expect(typeof c.created).toBe('number')
     }
 
+    // Some providers send usage-only trailing chunks with choices:[]; guard throughout
+    const withChoices = (c: { choices?: unknown[] }) =>
+      Array.isArray(c.choices) && c.choices.length > 0
+
     // At least one chunk establishes assistant role
-    const roleChunk = chunks.find((c) => c.choices[0].delta.role === 'assistant')
+
+    const roleChunk = chunks.find((c) => withChoices(c) && c.choices[0].delta?.role === 'assistant')
     expect(roleChunk).toBeDefined()
 
     // At least one chunk carries non-empty text content
+
     const textChunks = chunks.filter(
-      (c) => typeof c.choices[0].delta.content === 'string' && c.choices[0].delta.content.length > 0
+      (c) =>
+        withChoices(c) &&
+        typeof c.choices[0].delta?.content === 'string' &&
+        c.choices[0].delta.content.length > 0
     )
     expect(textChunks.length).toBeGreaterThan(0)
 
-    // Finish chunk has a finish_reason (delta shape varies by provider)
-    const finishChunk = chunks.at(-1)
+    // Find the chunk that carries finish_reason (may not be the last if provider appends usage chunks)
+
+    const finishChunk = chunks.find((c) => withChoices(c) && c.choices[0].finish_reason != null)
+    expect(finishChunk).toBeDefined()
     if (strictFinishReason) {
       expect(finishChunk.choices[0].finish_reason).toBe('stop')
     } else {
