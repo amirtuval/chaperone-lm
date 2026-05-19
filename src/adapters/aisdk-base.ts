@@ -68,6 +68,7 @@ export abstract class AISdkAdapter implements ProviderAdapter {
         maxOutputTokens: transformed.max_tokens ?? undefined,
         topP: transformed.top_p ?? undefined,
         providerOptions,
+        maxRetries: 0,
       })
 
       await serializeResponse(result, alias, transformed.stream === true, res)
