@@ -96,9 +96,8 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
     )
     expect(textChunks.length).toBeGreaterThan(0)
 
-    // Finish chunk: empty delta, finish_reason strict or truthy
+    // Finish chunk has a finish_reason (delta shape varies by provider)
     const finishChunk = chunks.at(-1)
-    expect(finishChunk.choices[0].delta).toEqual({})
     if (strictFinishReason) {
       expect(finishChunk.choices[0].finish_reason).toBe('stop')
     } else {
