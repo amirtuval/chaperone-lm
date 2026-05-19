@@ -2,6 +2,7 @@ import 'dotenv/config'
 import { loadConfig } from './config/loader.js'
 import { buildAdapterRegistry } from './adapters/registry.js'
 import { createApp } from './server.js'
+import { logger } from './logger.js'
 
 const configPath = process.env['CONFIG_PATH'] ?? './config.yaml'
 const port = parseInt(process.env['PORT'] ?? '3000', 10)
@@ -12,9 +13,9 @@ try {
   const app = createApp(config, adapterRegistry)
 
   app.listen(port, () => {
-    console.log(`chapernoe-lm listening on port ${port}`)
+    logger.info({ port }, 'chaperone-lm listening')
   })
 } catch (err) {
-  console.error('Failed to start:', err instanceof Error ? err.message : err)
+  logger.error({ err }, 'failed to start')
   process.exit(1)
 }
