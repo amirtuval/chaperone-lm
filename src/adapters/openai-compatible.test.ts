@@ -6,7 +6,9 @@ import type { ChannelConfig } from '../types.js'
 
 const adapter = new OpenAICompatibleAdapter()
 
-function makeChannelConfig(overrides: Partial<Extract<ChannelConfig, { type: 'openai-compatible' }>> = {}): ChannelConfig {
+function makeChannelConfig(
+  overrides: Partial<Extract<ChannelConfig, { type: 'openai-compatible' }>> = {}
+): ChannelConfig {
   return {
     name: 'test-channel',
     type: 'openai-compatible',
@@ -21,7 +23,10 @@ function makeCtx(channelConfig: ChannelConfig = makeChannelConfig()): RouteConte
 }
 
 function makeReq(body: object = {}, headers: Record<string, string> = {}): Request {
-  return { body: { model: 'my-alias', messages: [{ role: 'user', content: 'hi' }], ...body }, headers } as unknown as Request
+  return {
+    body: { model: 'my-alias', messages: [{ role: 'user', content: 'hi' }], ...body },
+    headers,
+  } as unknown as Request
 }
 
 function makeRes() {
@@ -141,7 +146,10 @@ describe('OpenAICompatibleAdapter.handleRequest', () => {
   })
 
   it('sets Content-Type from upstream response', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(makeFetchResponse('data: {}\n\n', 200, 'text/event-stream')))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(makeFetchResponse('data: {}\n\n', 200, 'text/event-stream'))
+    )
     const res = makeRes()
 
     await adapter.handleRequest(makeReq(), res, makeCtx())
@@ -150,11 +158,14 @@ describe('OpenAICompatibleAdapter.handleRequest', () => {
   })
 
   it('pipes response body chunks and calls end', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      status: 200,
-      headers: { get: () => 'application/json' },
-      body: makeReadableStream(['{"id":', '"abc"}'])
-    }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        status: 200,
+        headers: { get: () => 'application/json' },
+        body: makeReadableStream(['{"id":', '"abc"}']),
+      })
+    )
     const res = makeRes()
 
     await adapter.handleRequest(makeReq(), res, makeCtx())

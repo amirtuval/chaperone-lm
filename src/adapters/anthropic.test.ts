@@ -96,4 +96,3 @@ describe('AnthropicAdapter.transformRequest', () => {
     expect(res.status).toHaveBeenCalledWith(400)
   })
 })
-
