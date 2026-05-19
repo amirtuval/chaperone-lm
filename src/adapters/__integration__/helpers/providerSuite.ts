@@ -18,6 +18,12 @@ export interface ProviderSuiteOptions {
    * tool use on the Converse API but not on ConverseStream, which the AI SDK always uses).
    */
   supportsTools?: boolean
+  /**
+   * Delay in ms to wait before the "handles multiple system messages" test.
+   * Use for endpoints with low RPM limits (e.g. Azure AI Foundry serverless)
+   * where earlier tests in the suite exhaust the rate limit window.
+   */
+  rateLimitDelayMs?: number
 }
 
 const GET_WEATHER_TOOL = {
@@ -34,7 +40,8 @@ const GET_WEATHER_TOOL = {
 }
 
 export function runProviderSuite(options: ProviderSuiteOptions): void {
-  const { app, modelAlias, strictFinishReason = true, supportsTools = true } = options
+  const { app, modelAlias, strictFinishReason = true, supportsTools = true, rateLimitDelayMs } =
+    options
   const itTool = supportsTools ? it : it.skip
 
   it('returns a non-streaming response (stream: false)', async () => {
@@ -117,6 +124,7 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
   }, 60000)
 
   it('handles multiple system messages (stream: false)', async () => {
+    if (rateLimitDelayMs) await new Promise((resolve) => setTimeout(resolve, rateLimitDelayMs))
     const res = await request(app)
       .post('/v1/chat/completions')
       .send({
@@ -132,7 +140,7 @@ export function runProviderSuite(options: ProviderSuiteOptions): void {
     expect(res.status).toBe(200)
     expect(res.body.object).toBe('chat.completion')
     expect(res.body.choices[0].message.role).toBe('assistant')
-  }, 60000)
+  }, 60000 + (options.rateLimitDelayMs ?? 0))
 
   it('returns 404 for an unknown model alias', async () => {
     const res = await request(app)
