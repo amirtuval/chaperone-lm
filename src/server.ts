@@ -35,14 +35,21 @@ export function createApp(
   registerMessagesRoute(app, config, messagesRegistry)
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  app.use((err: Error & { status?: number; type?: string }, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status ?? 500
-    logger.error({ err, status }, 'unhandled error')
-    res.status(status).json({
-      type: 'error',
-      error: { type: 'api_error', message: err.message },
-    })
-  })
+  app.use(
+    (
+      err: Error & { status?: number; type?: string },
+      _req: Request,
+      res: Response,
+      _next: NextFunction
+    ) => {
+      const status = err.status ?? 500
+      logger.error({ err, status }, 'unhandled error')
+      res.status(status).json({
+        type: 'error',
+        error: { type: 'api_error', message: err.message },
+      })
+    }
+  )
 
   return app
 }

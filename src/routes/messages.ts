@@ -21,8 +21,8 @@ export function registerMessagesRoute(
     }
 
     // Accept both the raw alias and the claude-prefixed form emitted by /v1/models for Anthropic clients
-    const resolvedAlias =
-      messagesRegistry.has(alias) ? alias
+    const resolvedAlias = messagesRegistry.has(alias)
+      ? alias
       : alias.startsWith('claude-') && messagesRegistry.has(alias.slice('claude-'.length))
         ? alias.slice('claude-'.length)
         : null
