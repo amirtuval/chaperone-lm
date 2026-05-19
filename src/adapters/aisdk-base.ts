@@ -158,8 +158,10 @@ export abstract class AISdkAdapter implements ProviderAdapter {
 
     try {
       if (transformed.stream === true) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const includeUsage = (transformed as any).stream_options?.include_usage === true
         const { stream } = await model.doStream(options)
-        await serializeStream(stream, alias, res)
+        await serializeStream(stream, alias, res, includeUsage)
       } else {
         const result = await model.doGenerate(options)
         serializeGenerate(result, alias, res)

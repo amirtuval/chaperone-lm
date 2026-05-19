@@ -280,11 +280,42 @@ describe('serializeGenerate', () => {
     expect(choices[0].finish_reason).toBe('tool_calls')
   })
 
-  it('emits a trailing usage chunk (choices:[]) after the finish chunk', async () => {
+  it('emits a trailing usage chunk when includeUsage=true', async () => {
     const res = mockRes()
     await serializeStream(
       makeStream([
         { type: 'text-delta', id: '1', delta: 'Hi' },
+        {
+          type: 'finish',
+          finishReason: { unified: 'stop', raw: 'stop' },
+          usage: {
+            inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 5, text: 5, reasoning: 0 },
+          },
+        },
+      ]),
+      'my-model',
+      res as never,
+      true
+    )
+
+    const dataLines = res
+      .getChunks()
+      .filter((c) => c.startsWith('data: ') && !c.includes('[DONE]'))
+      .map((c) => JSON.parse(c.replace('data: ', '')))
+
+    const usageChunk = dataLines.find(
+      (c: { choices: unknown[]; usage?: unknown }) =>
+        Array.isArray(c.choices) && c.choices.length === 0
+    )
+    expect(usageChunk).toBeDefined()
+    expect(usageChunk.usage).toEqual({ prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 })
+  })
+
+  it('does not emit a trailing usage chunk when includeUsage=false (default)', async () => {
+    const res = mockRes()
+    await serializeStream(
+      makeStream([
         {
           type: 'finish',
           finishReason: { unified: 'stop', raw: 'stop' },
@@ -304,11 +335,9 @@ describe('serializeGenerate', () => {
       .map((c) => JSON.parse(c.replace('data: ', '')))
 
     const usageChunk = dataLines.find(
-      (c: { choices: unknown[]; usage?: unknown }) =>
-        Array.isArray(c.choices) && c.choices.length === 0
+      (c: { choices: unknown[] }) => Array.isArray(c.choices) && c.choices.length === 0
     )
-    expect(usageChunk).toBeDefined()
-    expect(usageChunk.usage).toEqual({ prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 })
+    expect(usageChunk).toBeUndefined()
   })
 
   it('normalizes finish_reason tool-calls → tool_calls in streams', async () => {
