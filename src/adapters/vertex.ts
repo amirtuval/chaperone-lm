@@ -1,4 +1,4 @@
-import type { LanguageModel } from 'ai'
+import type { LanguageModelV3 } from '@ai-sdk/provider'
 import { createVertex } from '@ai-sdk/google-vertex'
 import { createVertexAnthropic } from '@ai-sdk/google-vertex/anthropic'
 import { createVertexMaas } from '@ai-sdk/google-vertex/maas'
@@ -39,7 +39,7 @@ export class VertexAdapter extends AISdkAdapter {
     return req
   }
 
-  createModel(channelConfig: ChannelConfig, modelId: string): LanguageModel {
+  createModel(channelConfig: ChannelConfig, modelId: string): LanguageModelV3 {
     if (channelConfig.type !== 'vertex') {
       throw new Error(`VertexAdapter: expected vertex channel config, got ${channelConfig.type}`)
     }

@@ -1,4 +1,4 @@
-import type { LanguageModel } from 'ai'
+import type { LanguageModelV3 } from '@ai-sdk/provider'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
 import { createVertex } from '@ai-sdk/google-vertex'
@@ -6,6 +6,7 @@ import type { ChannelConfig } from '../types.js'
 import type { AdapterRequestError, GatewayRequest } from './types.js'
 import { AISdkAdapter } from './aisdk-base.js'
 import { httpError } from './errors.js'
+import { wrapV2AsV3 } from './v2-compat.js'
 
 const REASONING_EFFORT_BUDGET: Record<string, number> = {
   low: 2000,
@@ -57,12 +58,12 @@ export class AnthropicAdapter extends AISdkAdapter {
     channelConfig: ChannelConfig,
     modelId: string,
     _deploymentId?: string
-  ): LanguageModel {
+  ): LanguageModelV3 {
     switch (channelConfig.type) {
       case 'anthropic':
         return createAnthropic({ apiKey: channelConfig.apiKey })(modelId)
       case 'bedrock':
-        return createAmazonBedrock({ region: channelConfig.region })(modelId)
+        return wrapV2AsV3(createAmazonBedrock({ region: channelConfig.region })(modelId))
       case 'vertex':
         return createVertex({ project: channelConfig.project, location: channelConfig.region })(
           modelId
