@@ -19,10 +19,10 @@ function makeApp(modelAlias: string, modelId: string) {
   return createApp(config, buildCompletionsRegistry(config), buildMessagesRegistry(config))
 }
 
-describe.skipIf(!hasCredentials)('Google Messages API — Gemini 2.0 Flash Lite — integration', () => {
+describe.skipIf(!hasCredentials)('Google Messages API — Gemini 2.5 Flash — integration', () => {
   runMessagesProviderSuite({
-    app: makeApp('gemini-flash-lite', 'gemini-2.0-flash-lite'),
-    modelAlias: 'gemini-flash-lite',
+    app: makeApp('gemini-flash', 'gemini-2.5-flash'),
+    modelAlias: 'gemini-flash',
     strictFinishReason: true,
   })
 })
