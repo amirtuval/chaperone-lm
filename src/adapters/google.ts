@@ -1,4 +1,4 @@
-import type { LanguageModel } from 'ai'
+import type { LanguageModelV3 } from '@ai-sdk/provider'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createVertex } from '@ai-sdk/google-vertex'
 import type { ChannelConfig } from '../types.js'
@@ -60,7 +60,7 @@ export class GoogleAdapter extends AISdkAdapter {
     channelConfig: ChannelConfig,
     modelId: string,
     _deploymentId?: string
-  ): LanguageModel {
+  ): LanguageModelV3 {
     switch (channelConfig.type) {
       case 'google':
         return createGoogleGenerativeAI({ apiKey: channelConfig.apiKey })(modelId)

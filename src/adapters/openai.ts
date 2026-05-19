@@ -1,4 +1,4 @@
-import type { LanguageModel } from 'ai'
+import type { LanguageModelV3 } from '@ai-sdk/provider'
 import { createOpenAI } from '@ai-sdk/openai'
 import type { ChannelConfig } from '../types.js'
 import type { AdapterRequestError, GatewayRequest } from './types.js'
@@ -40,7 +40,7 @@ export class OpenAIAdapter extends AISdkAdapter {
     channelConfig: ChannelConfig,
     modelId: string,
     _deploymentId?: string
-  ): LanguageModel {
+  ): LanguageModelV3 {
     if (channelConfig.type !== 'openai') {
       throw new Error(`OpenAIAdapter requires channel type 'openai', got '${channelConfig.type}'`)
     }

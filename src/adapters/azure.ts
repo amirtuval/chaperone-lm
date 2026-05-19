@@ -1,4 +1,4 @@
-import type { LanguageModel } from 'ai'
+import type { LanguageModelV3 } from '@ai-sdk/provider'
 import { createAzure } from '@ai-sdk/azure'
 import type { ChannelConfig } from '../types.js'
 import type { AdapterRequestError, GatewayRequest } from './types.js'
@@ -36,7 +36,7 @@ export class AzureAdapter extends AISdkAdapter {
     return transformed
   }
 
-  createModel(channelConfig: ChannelConfig, modelId: string, deploymentId?: string): LanguageModel {
+  createModel(channelConfig: ChannelConfig, modelId: string, deploymentId?: string): LanguageModelV3 {
     if (channelConfig.type !== 'azure') {
       throw new Error(`AzureAdapter requires channel type 'azure', got '${channelConfig.type}'`)
     }

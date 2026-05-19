@@ -1,30 +1,54 @@
 import { describe, it, expect } from 'vitest'
 import request from 'supertest'
 import { MockLanguageModelV3, convertArrayToReadableStream } from 'ai/test'
-import type { LanguageModel } from 'ai'
+import type { LanguageModelV3 } from '@ai-sdk/provider'
+import type { LanguageModelV3StreamPart, LanguageModelV3GenerateResult } from '@ai-sdk/provider'
 import { createApp } from '../server.js'
 import type { AppConfig, ChannelConfig } from '../types.js'
 import type { GatewayRequest, AdapterRequestError } from '../adapters/types.js'
 import { AISdkAdapter } from '../adapters/aisdk-base.js'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function makeModel(parts: any[]): LanguageModel {
+function partsToGenerateResult(parts: any[]): LanguageModelV3GenerateResult {
+  let text = ''
+  let finishReason: LanguageModelV3GenerateResult['finishReason'] = { unified: 'stop', raw: 'stop' }
+  let usage: LanguageModelV3GenerateResult['usage'] = {
+    inputTokens: { total: 0, noCache: 0, cacheRead: 0, cacheWrite: 0 },
+    outputTokens: { total: 0, text: 0, reasoning: 0 },
+  }
+  for (const part of parts) {
+    if (part.type === 'text-delta') text += part.delta
+    else if (part.type === 'finish') {
+      finishReason = part.finishReason
+      usage = part.usage
+    }
+  }
+  return {
+    content: text ? [{ type: 'text', text }] : [],
+    finishReason,
+    usage,
+    warnings: [],
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function makeModel(parts: any[]): LanguageModelV3 {
   return new MockLanguageModelV3({
     doStream: async () => ({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      stream: convertArrayToReadableStream(parts as any),
+      stream: convertArrayToReadableStream(parts as LanguageModelV3StreamPart[]),
     }),
+    doGenerate: async () => partsToGenerateResult(parts),
   })
 }
 
 class MockAdapter extends AISdkAdapter {
-  constructor(private readonly model: LanguageModel) {
+  constructor(private readonly model: LanguageModelV3) {
     super()
   }
   transformRequest(req: GatewayRequest): GatewayRequest | AdapterRequestError {
     return req
   }
-  createModel(_channelConfig: unknown, _modelId: string): LanguageModel {
+  createModel(_channelConfig: unknown, _modelId: string): LanguageModelV3 {
     return this.model
   }
 }
@@ -38,7 +62,7 @@ class RejectingAdapter extends AISdkAdapter {
           .json({ error: { message: 'Rejected by adapter', type: 'invalid_request_error' } }),
     }
   }
-  createModel(): LanguageModel {
+  createModel(): LanguageModelV3 {
     return makeModel([])
   }
 }
@@ -71,8 +95,8 @@ describe('POST /v1/chat/completions', () => {
         { type: 'text-delta', id: '1', delta: 'Hello!' },
         {
           type: 'finish',
-          finishReason: { unified: 'stop', provider: 'stop' },
-          usage: { inputTokens: { total: 5 }, outputTokens: { total: 3 } },
+          finishReason: { unified: 'stop', raw: 'stop' },
+          usage: { inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: 3, text: 3, reasoning: 0 } },
         },
       ])
     )
@@ -93,8 +117,8 @@ describe('POST /v1/chat/completions', () => {
         { type: 'text-delta', id: '1', delta: 'Streaming!' },
         {
           type: 'finish',
-          finishReason: { unified: 'stop', provider: 'stop' },
-          usage: { inputTokens: { total: 5 }, outputTokens: { total: 3 } },
+          finishReason: { unified: 'stop', raw: 'stop' },
+          usage: { inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 }, outputTokens: { total: 3, text: 3, reasoning: 0 } },
         },
       ])
     )
