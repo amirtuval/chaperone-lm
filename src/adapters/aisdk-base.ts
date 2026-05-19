@@ -64,14 +64,18 @@ export function buildPrompt(messages: GatewayRequest['messages']): LanguageModel
       const toolCalls = am.tool_calls as
         | Array<{ id: string; function: { name: string; arguments: string } }>
         | undefined
-      toolCalls?.forEach((tc) =>
-        parts.push({
-          type: 'tool-call',
-          toolCallId: tc.id,
-          toolName: tc.function.name,
-          input: tc.function.arguments,
-        })
-      )
+      toolCalls?.forEach((tc) => {
+        // Anthropic API requires tool_use.input to be an object, not a JSON string.
+        // Other providers (e.g. OpenAI) accept the string via serializeToolCallArguments,
+        // so parse here and let each provider adapter re-serialize as needed.
+        let input: unknown
+        try {
+          input = JSON.parse(tc.function.arguments)
+        } catch {
+          input = {}
+        }
+        parts.push({ type: 'tool-call', toolCallId: tc.id, toolName: tc.function.name, input })
+      })
 
       if (parts.length > 0) prompt.push({ role: 'assistant', content: parts })
     } else if (m.role === 'tool') {

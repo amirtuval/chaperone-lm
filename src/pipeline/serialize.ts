@@ -6,6 +6,13 @@ function generateId(): string {
   return `chatcmpl-${Date.now()}-${++idCounter}`
 }
 
+// V3 uses hyphens ('tool-calls', 'content-filter'); OpenAI wire format uses underscores.
+function toOpenAIFinishReason(unified: string): string {
+  if (unified === 'tool-calls') return 'tool_calls'
+  if (unified === 'content-filter') return 'content_filter'
+  return unified
+}
+
 export async function serializeStream(
   stream: ReadableStream<LanguageModelV3StreamPart>,
   modelAlias: string,
@@ -87,7 +94,9 @@ export async function serializeStream(
         } else if (part.type === 'finish') {
           sse({
             ...base,
-            choices: [{ index: 0, delta: {}, finish_reason: part.finishReason.unified }],
+            choices: [
+              { index: 0, delta: {}, finish_reason: toOpenAIFinishReason(part.finishReason.unified) },
+            ],
           })
         }
       }
@@ -120,10 +129,13 @@ export function serializeGenerate(
     if (part.type === 'text') {
       fullText += part.text
     } else if (part.type === 'tool-call') {
+      // V3 input may be a pre-parsed object (e.g. from Anthropic adapter) or already a
+      // JSON string (e.g. from OpenAI adapter). OpenAI wire format requires a string.
+      const args = typeof part.input === 'string' ? part.input : JSON.stringify(part.input)
       toolCalls.push({
         id: part.toolCallId,
         type: 'function',
-        function: { name: part.toolName, arguments: part.input },
+        function: { name: part.toolName, arguments: args },
       })
     }
   }
@@ -142,7 +154,7 @@ export function serializeGenerate(
     object: 'chat.completion',
     created,
     model: modelAlias,
-    choices: [{ index: 0, message, finish_reason: result.finishReason.unified }],
+    choices: [{ index: 0, message, finish_reason: toOpenAIFinishReason(result.finishReason.unified) }],
     usage: {
       prompt_tokens: promptTokens,
       completion_tokens: completionTokens,
