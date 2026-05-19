@@ -2,7 +2,11 @@ import { describe } from 'vitest'
 import { createApp } from '../../server.js'
 import { buildCompletionsRegistry, buildMessagesRegistry } from '../registry.js'
 import type { AppConfig } from '../../types.js'
-import { runProviderSuite } from './helpers/providerSuite.js'
+import { runMessagesProviderSuite } from './helpers/messagesProviderSuite.js'
+
+// OpenRouter via llm-server (openai protocol) — via AISdkMessagesAdapter with openai-compatible SDK.
+// Required env vars:
+//   OPENROUTER_API_KEY — OpenRouter API key
 
 const config: AppConfig = {
   channels: [
@@ -20,9 +24,13 @@ const config: AppConfig = {
 }
 
 describe.skipIf(!process.env.OPENROUTER_API_KEY)(
-  'OpenRouter adapter (llm-server) — integration',
+  'OpenRouter Messages API (llm-server) — integration',
   () => {
     const app = createApp(config, buildCompletionsRegistry(config), buildMessagesRegistry(config))
-    runProviderSuite({ app, modelAlias: 'free-model', strictFinishReason: false })
+    runMessagesProviderSuite({
+      app,
+      modelAlias: 'free-model',
+      strictFinishReason: false,
+    })
   }
 )

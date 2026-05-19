@@ -4,9 +4,13 @@ import { MockLanguageModelV3, convertArrayToReadableStream } from 'ai/test'
 import type { LanguageModelV3 } from '@ai-sdk/provider'
 import type { LanguageModelV3StreamPart, LanguageModelV3GenerateResult } from '@ai-sdk/provider'
 import { createApp } from '../server.js'
-import type { AppConfig, ChannelConfig } from '../types.js'
-import type { GatewayRequest, AdapterRequestError } from '../adapters/types.js'
-import { AISdkAdapter } from '../adapters/aisdk-base.js'
+import type { AppConfig } from '../types.js'
+import type {
+  CompletionsProviderAdapter,
+  GatewayRequest,
+  AdapterRequestError,
+} from '../adapters/types.js'
+import { AISdkCompletionsAdapter } from '../adapters/aisdk-completions.js'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function partsToGenerateResult(parts: any[]): LanguageModelV3GenerateResult {
@@ -41,36 +45,8 @@ function makeModel(parts: any[]): LanguageModelV3 {
   })
 }
 
-class MockAdapter extends AISdkAdapter {
-  constructor(private readonly model: LanguageModelV3) {
-    super()
-  }
-  transformRequest(req: GatewayRequest): GatewayRequest | AdapterRequestError {
-    return req
-  }
-  createModel(_channelConfig: unknown, _modelId: string): LanguageModelV3 {
-    return this.model
-  }
-}
-
-class RejectingAdapter extends AISdkAdapter {
-  transformRequest(_req: GatewayRequest): GatewayRequest | AdapterRequestError {
-    return {
-      writeError: (res) =>
-        res
-          .status(422)
-          .json({ error: { message: 'Rejected by adapter', type: 'invalid_request_error' } }),
-    }
-  }
-  createModel(): LanguageModelV3 {
-    return makeModel([])
-  }
-}
-
-const channel: ChannelConfig = { name: 'test-channel', type: 'openai', apiKey: 'test' }
-
 const config: AppConfig = {
-  channels: [channel],
+  channels: [{ name: 'test-channel', type: 'openai', apiKey: 'test' }],
   models: {
     'test-model': { channel: 'test-channel', model: 'gpt-4o-test' },
   },
@@ -78,9 +54,10 @@ const config: AppConfig = {
 
 describe('POST /v1/chat/completions', () => {
   it('returns 404 for an unknown model', async () => {
-    const adapter = new MockAdapter(makeModel([]))
-    const registry = new Map([['test-channel', adapter]])
-    const app = createApp(config, registry)
+    const adapter = new AISdkCompletionsAdapter(makeModel([]))
+    // Registry keyed by alias
+    const registry = new Map<string, CompletionsProviderAdapter>([['test-model', adapter]])
+    const app = createApp(config, registry, new Map())
 
     const res = await request(app)
       .post('/v1/chat/completions')
@@ -90,7 +67,7 @@ describe('POST /v1/chat/completions', () => {
   })
 
   it('returns a non-streaming chat.completion for stream: false', async () => {
-    const adapter = new MockAdapter(
+    const adapter = new AISdkCompletionsAdapter(
       makeModel([
         { type: 'text-delta', id: '1', delta: 'Hello!' },
         {
@@ -103,8 +80,8 @@ describe('POST /v1/chat/completions', () => {
         },
       ])
     )
-    const registry = new Map([['test-channel', adapter]])
-    const app = createApp(config, registry)
+    const registry = new Map<string, CompletionsProviderAdapter>([['test-model', adapter]])
+    const app = createApp(config, registry, new Map())
 
     const res = await request(app)
       .post('/v1/chat/completions')
@@ -115,7 +92,7 @@ describe('POST /v1/chat/completions', () => {
   })
 
   it('returns SSE chunks for stream: true', async () => {
-    const adapter = new MockAdapter(
+    const adapter = new AISdkCompletionsAdapter(
       makeModel([
         { type: 'text-delta', id: '1', delta: 'Streaming!' },
         {
@@ -128,8 +105,8 @@ describe('POST /v1/chat/completions', () => {
         },
       ])
     )
-    const registry = new Map([['test-channel', adapter]])
-    const app = createApp(config, registry)
+    const registry = new Map<string, CompletionsProviderAdapter>([['test-model', adapter]])
+    const app = createApp(config, registry, new Map())
 
     const res = await request(app)
       .post('/v1/chat/completions')
@@ -140,10 +117,16 @@ describe('POST /v1/chat/completions', () => {
     expect(res.text).toContain('[DONE]')
   })
 
-  it('returns the adapter error when transformRequest rejects', async () => {
-    const adapter = new RejectingAdapter()
-    const registry = new Map([['test-channel', adapter]])
-    const app = createApp(config, registry)
+  it('returns the adapter error when transformFn rejects', async () => {
+    const rejectingTransform = (_req: GatewayRequest): GatewayRequest | AdapterRequestError => ({
+      writeError: (res) =>
+        res
+          .status(422)
+          .json({ error: { message: 'Rejected by adapter', type: 'invalid_request_error' } }),
+    })
+    const adapter = new AISdkCompletionsAdapter(makeModel([]), rejectingTransform)
+    const registry = new Map<string, CompletionsProviderAdapter>([['test-model', adapter]])
+    const app = createApp(config, registry, new Map())
 
     const res = await request(app)
       .post('/v1/chat/completions')

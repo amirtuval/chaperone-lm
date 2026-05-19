@@ -1,15 +1,18 @@
 import type { Request, Response } from 'express'
 import type { AppConfig } from '../types.js'
-import type { ProviderAdapter, GatewayRequest } from '../adapters/types.js'
+import type { CompletionsProviderAdapter, GatewayRequest } from '../adapters/types.js'
 import { resolveRoute } from '../routing/resolver.js'
 import { logger } from '../logger.js'
 
-export function makeChatHandler(config: AppConfig, adapterRegistry: Map<string, ProviderAdapter>) {
+export function makeChatHandler(
+  config: AppConfig,
+  completionsRegistry: Map<string, CompletionsProviderAdapter>
+) {
   return async (req: Request, res: Response) => {
     const body = req.body as GatewayRequest
     const alias = typeof body.model === 'string' ? body.model : ''
 
-    const route = resolveRoute(alias, config, adapterRegistry)
+    const route = resolveRoute(alias, config, completionsRegistry)
     if (!route) {
       logger.warn({ alias }, 'model not found')
       res.status(404).json({
@@ -27,7 +30,7 @@ export function makeChatHandler(config: AppConfig, adapterRegistry: Map<string, 
       'route resolved'
     )
 
-    await route.adapter.handleRequest(req, res, {
+    await route.adapter.handleCompletionsRequest(req, res, {
       channelConfig: route.channelConfig,
       upstreamModelId: route.upstreamModelId,
       deploymentId: route.deploymentId,

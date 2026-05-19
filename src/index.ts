@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import { loadConfig } from './config/loader.js'
-import { buildAdapterRegistry } from './adapters/registry.js'
+import { buildCompletionsRegistry, buildMessagesRegistry } from './adapters/registry.js'
 import { createApp } from './server.js'
 import { logger } from './logger.js'
 
@@ -9,8 +9,9 @@ const port = parseInt(process.env['PORT'] ?? '3000', 10)
 
 try {
   const config = loadConfig(configPath)
-  const adapterRegistry = buildAdapterRegistry(config.channels)
-  const app = createApp(config, adapterRegistry)
+  const completionsRegistry = buildCompletionsRegistry(config)
+  const messagesRegistry = buildMessagesRegistry(config)
+  const app = createApp(config, completionsRegistry, messagesRegistry)
 
   app.listen(port, () => {
     logger.info({ port }, 'chaperone-lm listening')

@@ -1,6 +1,5 @@
 import type { Request, Response } from 'express'
-import type { ChannelConfig } from '../types.js'
-import type { ProviderAdapter, RouteContext, GatewayRequest } from './types.js'
+import type { CompletionsProviderAdapter, RouteContext, GatewayRequest } from './types.js'
 import { logger } from '../logger.js'
 
 const decoder = new TextDecoder()
@@ -9,6 +8,16 @@ const encoder = new TextEncoder()
 function rewriteModel(json: Record<string, unknown>, alias: string): Record<string, unknown> {
   if ('model' in json) return { ...json, model: alias }
   return json
+}
+
+function rewriteSSELine(line: string, alias: string): string {
+  if (!line.startsWith('data: ') || line === 'data: [DONE]') return line
+  try {
+    const json = JSON.parse(line.slice('data: '.length)) as Record<string, unknown>
+    return 'data: ' + JSON.stringify(rewriteModel(json, alias))
+  } catch {
+    return line
+  }
 }
 
 async function pipeSSE(
@@ -32,16 +41,6 @@ async function pipeSSE(
     if (buffer) res.write(encoder.encode(rewriteSSELine(buffer, alias) + '\n'))
   } finally {
     res.end()
-  }
-}
-
-function rewriteSSELine(line: string, alias: string): string {
-  if (!line.startsWith('data: ') || line === 'data: [DONE]') return line
-  try {
-    const json = JSON.parse(line.slice('data: '.length)) as Record<string, unknown>
-    return 'data: ' + JSON.stringify(rewriteModel(json, alias))
-  } catch {
-    return line
   }
 }
 
@@ -71,17 +70,18 @@ async function pipeJSON(
   }
 }
 
-export abstract class PassthroughAdapter implements ProviderAdapter {
-  abstract getBaseUrl(channelConfig: ChannelConfig): string
-  abstract getAuthHeaders(channelConfig: ChannelConfig): Record<string, string>
+export class OpenAIPassthroughAdapter implements CompletionsProviderAdapter {
+  constructor(
+    private readonly baseUrl: string,
+    private readonly authHeaders: Record<string, string>
+  ) {}
 
-  async handleRequest(req: Request, res: Response, ctx: RouteContext): Promise<void> {
+  async handleCompletionsRequest(req: Request, res: Response, ctx: RouteContext): Promise<void> {
     const alias =
       typeof (req.body as GatewayRequest).model === 'string'
         ? ((req.body as GatewayRequest).model as string)
         : ''
-    const baseUrl = this.getBaseUrl(ctx.channelConfig).replace(/\/$/, '')
-    const authHeaders = this.getAuthHeaders(ctx.channelConfig)
+    const baseUrl = this.baseUrl.replace(/\/$/, '')
 
     const body: GatewayRequest = { ...(req.body as GatewayRequest), model: ctx.upstreamModelId }
 
@@ -98,7 +98,7 @@ export abstract class PassthroughAdapter implements ProviderAdapter {
         headers: {
           'Content-Type': 'application/json',
           Accept: (req.headers['accept'] as string | undefined) ?? 'application/json',
-          ...authHeaders,
+          ...this.authHeaders,
         },
         body: JSON.stringify(body),
       })

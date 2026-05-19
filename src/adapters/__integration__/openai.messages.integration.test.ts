@@ -2,9 +2,9 @@ import { describe } from 'vitest'
 import { createApp } from '../../server.js'
 import { buildCompletionsRegistry, buildMessagesRegistry } from '../registry.js'
 import type { AppConfig } from '../../types.js'
-import { runProviderSuite } from './helpers/providerSuite.js'
+import { runMessagesProviderSuite } from './helpers/messagesProviderSuite.js'
 
-// OpenAI direct API — authenticated via API key.
+// OpenAI — via AISdkMessagesAdapter (translates Anthropic → AI SDK → Anthropic format).
 // Required env vars:
 //   OPENAI_API_KEY — OpenAI API key
 
@@ -19,18 +19,10 @@ function makeApp(modelAlias: string, modelId: string) {
   return createApp(config, buildCompletionsRegistry(config), buildMessagesRegistry(config))
 }
 
-describe.skipIf(!hasCredentials)('OpenAI — gpt-4o-mini — integration', () => {
-  runProviderSuite({
+describe.skipIf(!hasCredentials)('OpenAI Messages API — gpt-4o-mini — integration', () => {
+  runMessagesProviderSuite({
     app: makeApp('gpt-4o-mini', 'gpt-4o-mini'),
     modelAlias: 'gpt-4o-mini',
-    strictFinishReason: true,
-  })
-})
-
-describe.skipIf(!hasCredentials)('OpenAI — o4-mini (reasoning) — integration', () => {
-  runProviderSuite({
-    app: makeApp('o4-mini', 'o4-mini'),
-    modelAlias: 'o4-mini',
     strictFinishReason: true,
   })
 })

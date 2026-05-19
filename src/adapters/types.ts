@@ -20,6 +20,10 @@ export interface RouteContext {
   deploymentId?: string
 }
 
-export interface ProviderAdapter {
-  handleRequest(req: Request, res: Response, ctx: RouteContext): Promise<void>
+export interface CompletionsProviderAdapter {
+  handleCompletionsRequest(req: Request, res: Response, ctx: RouteContext): Promise<void>
+}
+
+export interface MessagesProviderAdapter {
+  handleMessagesRequest(req: Request, res: Response, ctx: RouteContext): Promise<void>
 }

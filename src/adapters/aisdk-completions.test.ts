@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildPrompt } from './aisdk-base.js'
+import { buildPrompt } from './aisdk-completions.js'
 import type { GatewayRequest } from './types.js'
 
 type Msg = GatewayRequest['messages'][number]

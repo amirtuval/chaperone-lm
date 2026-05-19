@@ -1,25 +1,24 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import type { Request, Response } from 'express'
-import { OpenAICompatibleAdapter } from './openai-compatible.js'
+import { OpenAIPassthroughAdapter } from './passthrough-openai.js'
 import type { RouteContext } from './types.js'
 import type { ChannelConfig } from '../types.js'
 
-const adapter = new OpenAICompatibleAdapter()
-
-function makeChannelConfig(
-  overrides: Partial<Extract<ChannelConfig, { type: 'openai-compatible' }>> = {}
-): ChannelConfig {
-  return {
-    name: 'test-channel',
-    type: 'openai-compatible',
-    baseUrl: 'https://openrouter.ai/api/v1',
-    apiKey: 'sk-test',
-    ...overrides,
-  }
+const channel: ChannelConfig = {
+  name: 'test-channel',
+  type: 'llm-server',
+  baseUrl: 'https://openrouter.ai/api/v1',
+  apiKey: 'sk-test',
+  protocols: ['openai'],
 }
 
-function makeCtx(channelConfig: ChannelConfig = makeChannelConfig()): RouteContext {
-  return { channelConfig, upstreamModelId: 'meta/llama-3-70b' }
+function makeAdapter(baseUrl = 'https://openrouter.ai/api/v1', apiKey?: string) {
+  const authHeaders: Record<string, string> = apiKey ? { Authorization: `Bearer ${apiKey}` } : {}
+  return new OpenAIPassthroughAdapter(baseUrl, authHeaders)
+}
+
+function makeCtx(): RouteContext {
+  return { channelConfig: channel, upstreamModelId: 'meta/llama-3-70b' }
 }
 
 function makeReq(body: object = {}, headers: Record<string, string> = {}): Request {
@@ -66,35 +65,16 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('OpenAICompatibleAdapter.getBaseUrl', () => {
-  it('returns the configured baseUrl', () => {
-    expect(adapter.getBaseUrl(makeChannelConfig())).toBe('https://openrouter.ai/api/v1')
-  })
-
-  it('throws if channel type is not openai-compatible', () => {
-    const wrong: ChannelConfig = { name: 'x', type: 'openai', apiKey: 'k' }
-    expect(() => adapter.getBaseUrl(wrong)).toThrow("requires channel type 'openai-compatible'")
-  })
-})
-
-describe('OpenAICompatibleAdapter.getAuthHeaders', () => {
-  it('returns Authorization header when apiKey is set', () => {
-    const headers = adapter.getAuthHeaders(makeChannelConfig({ apiKey: 'sk-abc' }))
-    expect(headers).toEqual({ Authorization: 'Bearer sk-abc' })
-  })
-
-  it('returns empty headers when apiKey is absent', () => {
-    const headers = adapter.getAuthHeaders(makeChannelConfig({ apiKey: undefined }))
-    expect(headers).toEqual({})
-  })
-})
-
-describe('OpenAICompatibleAdapter.handleRequest', () => {
+describe('OpenAIPassthroughAdapter.handleCompletionsRequest', () => {
   it('POSTs to baseUrl/chat/completions with upstream model in body', async () => {
     const mockFetch = vi.fn().mockResolvedValue(makeFetchResponse('{}'))
     vi.stubGlobal('fetch', mockFetch)
 
-    await adapter.handleRequest(makeReq(), makeRes(), makeCtx())
+    await makeAdapter('https://openrouter.ai/api/v1', 'sk-test').handleCompletionsRequest(
+      makeReq(),
+      makeRes(),
+      makeCtx()
+    )
 
     expect(mockFetch).toHaveBeenCalledOnce()
     const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit]
@@ -107,9 +87,12 @@ describe('OpenAICompatibleAdapter.handleRequest', () => {
   it('strips trailing slash from baseUrl before appending path', async () => {
     const mockFetch = vi.fn().mockResolvedValue(makeFetchResponse('{}'))
     vi.stubGlobal('fetch', mockFetch)
-    const ctx = makeCtx(makeChannelConfig({ baseUrl: 'https://example.com/api/v1/' }))
 
-    await adapter.handleRequest(makeReq(), makeRes(), ctx)
+    await makeAdapter('https://example.com/api/v1/').handleCompletionsRequest(
+      makeReq(),
+      makeRes(),
+      makeCtx()
+    )
 
     const [url] = mockFetch.mock.calls[0] as [string, RequestInit]
     expect(url).toBe('https://example.com/api/v1/chat/completions')
@@ -119,18 +102,25 @@ describe('OpenAICompatibleAdapter.handleRequest', () => {
     const mockFetch = vi.fn().mockResolvedValue(makeFetchResponse('{}'))
     vi.stubGlobal('fetch', mockFetch)
 
-    await adapter.handleRequest(makeReq(), makeRes(), makeCtx())
+    await makeAdapter('https://openrouter.ai/api/v1', 'sk-abc').handleCompletionsRequest(
+      makeReq(),
+      makeRes(),
+      makeCtx()
+    )
 
     const [, init] = mockFetch.mock.calls[0] as [string, RequestInit]
-    expect((init.headers as Record<string, string>)['Authorization']).toBe('Bearer sk-test')
+    expect((init.headers as Record<string, string>)['Authorization']).toBe('Bearer sk-abc')
   })
 
   it('omits Authorization header when no apiKey', async () => {
     const mockFetch = vi.fn().mockResolvedValue(makeFetchResponse('{}'))
     vi.stubGlobal('fetch', mockFetch)
-    const ctx = makeCtx(makeChannelConfig({ apiKey: undefined }))
 
-    await adapter.handleRequest(makeReq(), makeRes(), ctx)
+    await makeAdapter('https://openrouter.ai/api/v1').handleCompletionsRequest(
+      makeReq(),
+      makeRes(),
+      makeCtx()
+    )
 
     const [, init] = mockFetch.mock.calls[0] as [string, RequestInit]
     expect((init.headers as Record<string, string>)['Authorization']).toBeUndefined()
@@ -140,7 +130,11 @@ describe('OpenAICompatibleAdapter.handleRequest', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(makeFetchResponse('{"error":"bad"}', 400)))
     const res = makeRes()
 
-    await adapter.handleRequest(makeReq(), res, makeCtx())
+    await makeAdapter('https://openrouter.ai/api/v1', 'sk-test').handleCompletionsRequest(
+      makeReq(),
+      res,
+      makeCtx()
+    )
 
     expect(res.status).toHaveBeenCalledWith(400)
   })
@@ -152,7 +146,11 @@ describe('OpenAICompatibleAdapter.handleRequest', () => {
     )
     const res = makeRes()
 
-    await adapter.handleRequest(makeReq(), res, makeCtx())
+    await makeAdapter('https://openrouter.ai/api/v1', 'sk-test').handleCompletionsRequest(
+      makeReq(),
+      res,
+      makeCtx()
+    )
 
     expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'text/event-stream')
   })
@@ -168,7 +166,11 @@ describe('OpenAICompatibleAdapter.handleRequest', () => {
     )
     const res = makeRes()
 
-    await adapter.handleRequest(makeReq(), res, makeCtx())
+    await makeAdapter('https://openrouter.ai/api/v1', 'sk-test').handleCompletionsRequest(
+      makeReq(),
+      res,
+      makeCtx()
+    )
 
     const endArg = (res.end as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
     expect(JSON.parse(endArg).model).toBe('my-alias')
@@ -187,7 +189,11 @@ describe('OpenAICompatibleAdapter.handleRequest', () => {
     )
     const res = makeRes()
 
-    await adapter.handleRequest(makeReq(), res, makeCtx())
+    await makeAdapter('https://openrouter.ai/api/v1', 'sk-test').handleCompletionsRequest(
+      makeReq(),
+      res,
+      makeCtx()
+    )
 
     const written = Buffer.concat(res._written.map((c) => Buffer.from(c))).toString()
     const dataLine = written.split('\n').find((l) => l.startsWith('data: ') && l !== 'data: [DONE]')
@@ -205,7 +211,11 @@ describe('OpenAICompatibleAdapter.handleRequest', () => {
     )
     const res = makeRes()
 
-    await adapter.handleRequest(makeReq(), res, makeCtx())
+    await makeAdapter('https://openrouter.ai/api/v1', 'sk-test').handleCompletionsRequest(
+      makeReq(),
+      res,
+      makeCtx()
+    )
 
     expect(res.end).toHaveBeenCalled()
   })
@@ -214,7 +224,7 @@ describe('OpenAICompatibleAdapter.handleRequest', () => {
     const mockFetch = vi.fn().mockResolvedValue(makeFetchResponse('{}'))
     vi.stubGlobal('fetch', mockFetch)
 
-    await adapter.handleRequest(
+    await makeAdapter('https://openrouter.ai/api/v1', 'sk-test').handleCompletionsRequest(
       makeReq({ stream: true, stream_options: { include_usage: true } }),
       makeRes(),
       makeCtx()
@@ -229,7 +239,11 @@ describe('OpenAICompatibleAdapter.handleRequest', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')))
     const res = makeRes()
 
-    await adapter.handleRequest(makeReq(), res, makeCtx())
+    await makeAdapter('https://openrouter.ai/api/v1', 'sk-test').handleCompletionsRequest(
+      makeReq(),
+      res,
+      makeCtx()
+    )
 
     expect(res.status).toHaveBeenCalledWith(502)
     expect(res.json).toHaveBeenCalledWith(

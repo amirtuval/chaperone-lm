@@ -9,9 +9,13 @@ import type {
   LanguageModelV3ToolResultPart,
   LanguageModelV3ToolChoice,
 } from '@ai-sdk/provider'
-import type { ChannelConfig } from '../types.js'
 import { serializeStream, serializeGenerate } from '../pipeline/serialize.js'
-import type { ProviderAdapter, RouteContext, GatewayRequest, AdapterRequestError } from './types.js'
+import type {
+  CompletionsProviderAdapter,
+  RouteContext,
+  GatewayRequest,
+  AdapterRequestError,
+} from './types.js'
 import { logger } from '../logger.js'
 
 function isAdapterError(result: unknown): result is AdapterRequestError {
@@ -95,7 +99,9 @@ export function buildPrompt(messages: GatewayRequest['messages']): LanguageModel
   return prompt
 }
 
-function buildTools(rawTools: GatewayRequest['tools']): LanguageModelV3FunctionTool[] | undefined {
+export function buildTools(
+  rawTools: GatewayRequest['tools']
+): LanguageModelV3FunctionTool[] | undefined {
   if (!rawTools || rawTools.length === 0) return undefined
   const tools: LanguageModelV3FunctionTool[] = []
   for (const raw of rawTools) {
@@ -112,7 +118,7 @@ function buildTools(rawTools: GatewayRequest['tools']): LanguageModelV3FunctionT
   return tools.length > 0 ? tools : undefined
 }
 
-function buildToolChoice(
+export function buildToolChoice(
   toolChoice: GatewayRequest['tool_choice']
 ): LanguageModelV3ToolChoice | undefined {
   if (!toolChoice) return undefined
@@ -125,27 +131,24 @@ function buildToolChoice(
   return undefined
 }
 
-export abstract class AISdkAdapter implements ProviderAdapter {
-  abstract transformRequest(req: GatewayRequest): GatewayRequest | AdapterRequestError
+export class AISdkCompletionsAdapter implements CompletionsProviderAdapter {
+  constructor(
+    private readonly model: LanguageModelV3,
+    private readonly transformFn?: (req: GatewayRequest) => GatewayRequest | AdapterRequestError
+  ) {}
 
-  abstract createModel(
-    channelConfig: ChannelConfig,
-    modelId: string,
-    deploymentId?: string
-  ): LanguageModelV3
-
-  async handleRequest(req: Request, res: Response, ctx: RouteContext): Promise<void> {
+  async handleCompletionsRequest(req: Request, res: Response, ctx: RouteContext): Promise<void> {
     const body = req.body as GatewayRequest
     const alias = typeof body.model === 'string' ? body.model : ''
 
-    const requestWithUpstreamModel: GatewayRequest = { ...body, model: ctx.upstreamModelId }
-    const transformed = this.transformRequest(requestWithUpstreamModel)
+    const withUpstream: GatewayRequest = { ...body, model: ctx.upstreamModelId }
+    const transformed = this.transformFn ? this.transformFn(withUpstream) : withUpstream
+
     if (isAdapterError(transformed)) {
       transformed.writeError(res)
       return
     }
 
-    const model = this.createModel(ctx.channelConfig, ctx.upstreamModelId, ctx.deploymentId)
     const options: LanguageModelV3CallOptions = {
       prompt: buildPrompt(transformed.messages ?? []),
       temperature: transformed.temperature ?? undefined,
@@ -161,10 +164,10 @@ export abstract class AISdkAdapter implements ProviderAdapter {
       if (transformed.stream === true) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const includeUsage = (transformed as any).stream_options?.include_usage === true
-        const { stream } = await model.doStream(options)
+        const { stream } = await this.model.doStream(options)
         await serializeStream(stream, alias, res, includeUsage)
       } else {
-        const result = await model.doGenerate(options)
+        const result = await this.model.doGenerate(options)
         serializeGenerate(result, alias, res)
       }
     } catch (err) {
