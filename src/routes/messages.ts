@@ -20,8 +20,14 @@ export function registerMessagesRoute(
       return
     }
 
-    const adapter = messagesRegistry.get(alias)
-    if (!adapter) {
+    // Accept both the raw alias and the claude-prefixed form emitted by /v1/models for Anthropic clients
+    const resolvedAlias =
+      messagesRegistry.has(alias) ? alias
+      : alias.startsWith('claude-') && messagesRegistry.has(alias.slice('claude-'.length))
+        ? alias.slice('claude-'.length)
+        : null
+
+    if (!resolvedAlias) {
       res.status(404).json({
         type: 'error',
         error: { type: 'not_found_error', message: `Model not found: ${alias}` },
@@ -29,7 +35,8 @@ export function registerMessagesRoute(
       return
     }
 
-    const modelConfig = config.models[alias]
+    const adapter = messagesRegistry.get(resolvedAlias)!
+    const modelConfig = config.models[resolvedAlias]
     const channelConfig = config.channels.find((ch) => ch.name === modelConfig.channel)
     if (!channelConfig) {
       res.status(500).json({

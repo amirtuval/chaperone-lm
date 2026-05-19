@@ -10,12 +10,15 @@ export function makeModelsHandler(
     const isAnthropicClient = Boolean(req.headers['anthropic-version'])
 
     if (isAnthropicClient) {
-      const data = Object.entries(config.models).map(([alias]) => ({
-        type: 'model',
-        id: alias,
-        display_name: alias,
-        created_at: new Date(0).toISOString(),
-      }))
+      const data = Object.entries(config.models).map(([alias]) => {
+        const id = alias.startsWith('claude-') ? alias : `claude-${alias}`
+        return {
+          type: 'model',
+          id,
+          display_name: alias,
+          created_at: new Date(0).toISOString(),
+        }
+      })
       const ids = data.map((m) => m.id)
       res.json({
         data,
