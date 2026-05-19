@@ -103,7 +103,13 @@ export class AnthropicPassthroughAdapter implements MessagesProviderAdapter {
           'Content-Type': 'application/json',
           Accept: (req.headers['accept'] as string | undefined) ?? 'application/json',
           ...this.authHeaders,
-          // Forward anthropic-version if present; fall back to default
+          // Forward all anthropic-* headers from the client (version, beta flags, etc.)
+          ...Object.fromEntries(
+            Object.entries(req.headers)
+              .filter(([k]) => k.startsWith('anthropic-'))
+              .map(([k, v]) => [k, Array.isArray(v) ? v.join(', ') : (v ?? '')])
+          ),
+          // Ensure anthropic-version always has a value
           'anthropic-version':
             (req.headers['anthropic-version'] as string | undefined) ?? '2023-06-01',
         },
