@@ -168,7 +168,10 @@ export abstract class AISdkAdapter implements ProviderAdapter {
         serializeGenerate(result, alias, res)
       }
     } catch (err) {
-      logger.error({ err, model: ctx.upstreamModelId, channel: ctx.channelConfig.name }, 'upstream error')
+      logger.error(
+        { err, model: ctx.upstreamModelId, channel: ctx.channelConfig.name },
+        'upstream error'
+      )
       if (!res.headersSent) {
         res.status(502).json({
           error: {

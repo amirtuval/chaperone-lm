@@ -24,7 +24,7 @@ export function makeChatHandler(config: AppConfig, adapterRegistry: Map<string, 
 
     logger.debug(
       { alias, channel: route.channelConfig.name, upstreamModel: route.upstreamModelId },
-      'route resolved',
+      'route resolved'
     )
 
     await route.adapter.handleRequest(req, res, {
