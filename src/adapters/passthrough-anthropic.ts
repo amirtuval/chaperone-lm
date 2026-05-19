@@ -8,6 +8,11 @@ const encoder = new TextEncoder()
 
 function rewriteModel(json: Record<string, unknown>, alias: string): Record<string, unknown> {
   if ('model' in json) return { ...json, model: alias }
+  // message_start carries the model nested under `message`
+  if (json['type'] === 'message_start' && json['message'] && typeof json['message'] === 'object') {
+    const msg = json['message'] as Record<string, unknown>
+    if ('model' in msg) return { ...json, message: { ...msg, model: alias } }
+  }
   return json
 }
 

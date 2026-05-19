@@ -127,7 +127,7 @@ describe('AnthropicPassthroughAdapter', () => {
     expect(headers['x-api-key']).toBe('sk-secret')
   })
 
-  it('proxies SSE stream and forwards all events', async () => {
+  it('proxies SSE stream, rewrites nested message.model in message_start', async () => {
     const lines = [
       'event: message_start',
       'data: {"type":"message_start","message":{"id":"msg_1","type":"message","role":"assistant","model":"claude-sonnet-4-5","content":[]}}',
@@ -159,6 +159,13 @@ describe('AnthropicPassthroughAdapter', () => {
     expect(res.status).toBe(200)
     expect(res.text).toContain('message_start')
     expect(res.text).toContain('message_stop')
+    // The nested message.model should be rewritten to the alias
+    const dataLine = res.text
+      .split('\n')
+      .find((l) => l.startsWith('data: ') && l.includes('message_start'))
+    expect(dataLine).toBeDefined()
+    const parsed = JSON.parse(dataLine!.slice('data: '.length))
+    expect(parsed.message.model).toBe('my-alias')
   })
 
   it('rewrites top-level model field in SSE data lines', async () => {
