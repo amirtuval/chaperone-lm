@@ -4,6 +4,9 @@ import type {
   LanguageModelV3CallOptions,
   LanguageModelV3FunctionTool,
   LanguageModelV3Prompt,
+  LanguageModelV3TextPart,
+  LanguageModelV3ToolCallPart,
+  LanguageModelV3ToolResultPart,
   LanguageModelV3ToolChoice,
 } from '@ai-sdk/provider'
 import type { ChannelConfig } from '../types.js'
@@ -14,11 +17,23 @@ function isAdapterError(result: unknown): result is AdapterRequestError {
   return typeof result === 'object' && result !== null && 'writeError' in result
 }
 
-function buildPrompt(messages: GatewayRequest['messages']): LanguageModelV3Prompt {
+export function buildPrompt(messages: GatewayRequest['messages']): LanguageModelV3Prompt {
   const systemTexts = messages
     .filter((m) => m.role === 'system')
     .map((m) => (typeof m.content === 'string' ? m.content : ''))
     .filter(Boolean)
+
+  // Pre-pass: collect tool call id → name so tool result messages can include toolName
+  const toolCallNames = new Map<string, string>()
+  for (const m of messages) {
+    if (m.role === 'assistant') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const toolCalls = (m as any).tool_calls as
+        | Array<{ id: string; function: { name: string } }>
+        | undefined
+      toolCalls?.forEach((tc) => toolCallNames.set(tc.id, tc.function.name))
+    }
+  }
 
   const prompt: LanguageModelV3Prompt = []
 
@@ -28,15 +43,48 @@ function buildPrompt(messages: GatewayRequest['messages']): LanguageModelV3Promp
 
   for (const m of messages) {
     if (m.role === 'user') {
-      prompt.push({
-        role: 'user',
-        content: [{ type: 'text', text: typeof m.content === 'string' ? m.content : '' }],
-      })
+      const parts: LanguageModelV3TextPart[] = []
+      if (typeof m.content === 'string') {
+        if (m.content) parts.push({ type: 'text', text: m.content })
+      } else if (Array.isArray(m.content)) {
+        for (const p of m.content as Array<{ type: string; text?: string }>) {
+          if (p.type === 'text' && p.text) parts.push({ type: 'text', text: p.text })
+        }
+      }
+      if (parts.length > 0) prompt.push({ role: 'user', content: parts })
     } else if (m.role === 'assistant') {
-      prompt.push({
-        role: 'assistant',
-        content: [{ type: 'text', text: typeof m.content === 'string' ? m.content : '' }],
-      })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const am = m as any
+      const parts: Array<LanguageModelV3TextPart | LanguageModelV3ToolCallPart> = []
+
+      if (typeof am.content === 'string' && am.content) {
+        parts.push({ type: 'text', text: am.content })
+      }
+
+      const toolCalls = am.tool_calls as
+        | Array<{ id: string; function: { name: string; arguments: string } }>
+        | undefined
+      toolCalls?.forEach((tc) =>
+        parts.push({
+          type: 'tool-call',
+          toolCallId: tc.id,
+          toolName: tc.function.name,
+          input: tc.function.arguments,
+        })
+      )
+
+      if (parts.length > 0) prompt.push({ role: 'assistant', content: parts })
+    } else if (m.role === 'tool') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tm = m as any
+      const value = typeof tm.content === 'string' ? tm.content : JSON.stringify(tm.content)
+      const part: LanguageModelV3ToolResultPart = {
+        type: 'tool-result',
+        toolCallId: tm.tool_call_id,
+        toolName: toolCallNames.get(tm.tool_call_id) ?? 'unknown',
+        output: { type: 'text', value },
+      }
+      prompt.push({ role: 'tool', content: [part] })
     }
   }
   return prompt
