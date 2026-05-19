@@ -21,7 +21,6 @@ const config: AppConfig = {
   },
 }
 
-// Registry keyed by alias
 const registry = new Map<string, CompletionsProviderAdapter>([
   ['claude-sonnet', makeAdapter()],
   ['gpt-4o', makeAdapter()],
@@ -30,7 +29,7 @@ const registry = new Map<string, CompletionsProviderAdapter>([
 
 const app = createApp(config, registry)
 
-describe('GET /v1/models', () => {
+describe('GET /v1/models — OpenAI format (no anthropic-version header)', () => {
   it('returns a list of all configured model aliases', async () => {
     const res = await request(app).get('/v1/models')
     expect(res.status).toBe(200)
@@ -54,5 +53,39 @@ describe('GET /v1/models', () => {
     expect(byId['claude-sonnet'].owned_by).toBe('anthropic')
     expect(byId['gpt-4o'].owned_by).toBe('openai')
     expect(byId['llama-70b'].owned_by).toBe('llm-server')
+  })
+})
+
+describe('GET /v1/models — Anthropic format (anthropic-version header)', () => {
+  it('returns Anthropic-format model list', async () => {
+    const res = await request(app).get('/v1/models').set('anthropic-version', '2023-06-01')
+    expect(res.status).toBe(200)
+    expect(res.body).not.toHaveProperty('object')
+    expect(res.body.has_more).toBe(false)
+    expect(res.body.data).toHaveLength(3)
+  })
+
+  it('each model entry has type, id, display_name', async () => {
+    const res = await request(app).get('/v1/models').set('anthropic-version', '2023-06-01')
+    for (const model of res.body.data) {
+      expect(model.type).toBe('model')
+      expect(typeof model.id).toBe('string')
+      expect(typeof model.display_name).toBe('string')
+    }
+  })
+
+  it('first_id and last_id match first and last alias', async () => {
+    const res = await request(app).get('/v1/models').set('anthropic-version', '2023-06-01')
+    const ids: string[] = res.body.data.map((m: { id: string }) => m.id)
+    expect(res.body.first_id).toBe(ids[0])
+    expect(res.body.last_id).toBe(ids[ids.length - 1])
+  })
+
+  it('does not include owned_by or object fields', async () => {
+    const res = await request(app).get('/v1/models').set('anthropic-version', '2023-06-01')
+    for (const model of res.body.data) {
+      expect(model).not.toHaveProperty('object')
+      expect(model).not.toHaveProperty('owned_by')
+    }
   })
 })
